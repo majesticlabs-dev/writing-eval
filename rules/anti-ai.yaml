@@ -1,0 +1,48 @@
+# Overlay with additional reader-facing AI-writing tells, curated from the
+# anti-AI tells research. The builtin rule set stays the default everywhere;
+# opt in with `--rules rules/anti-ai.yaml`. New ids append after the builtin
+# rules; overrides replace the full detector of the builtin rule in place and
+# keep its severity, message, and exceptions.
+extends: builtin
+rules:
+  - id: polish_vocab
+    detector: '(?i)\b(?:delve|leverage|seamless|robust|elevate|foster|navigate|landscape|realm|tapestry|underscore|pillar|journey|utilize|facilitate|empower|streamline|beacon|multifaceted|meticulous|intricate|paramount|transformative|embark|supercharge|harness|ever-evolving|paradigm shift|bolster(?:s|ed|ing)?|illuminat(?:e|es|ed|ing)|showcas(?:e|es|ed|ing)|optimiz(?:e|es|ed|ing)|resonat(?:e|es|ed|ing)|unleash(?:ed|ing)?|garner(?:s|ed)?|shed light on|elucidat(?:e|es|ed|ing)|intertwin(?:e|es|ed|ing)|grappl(?:e|ed|ing) with|exemplif(?:y|ies|ied)|underpin(?:s|ning|ned)?|synerg(?:y|ies)|interplay|intricacies|myriad|plethora|endeavor(?:s|ed)?|unwavering|profound(?:ly)?|poignant|fast-paced)\b'
+
+  - id: recap_endings
+    detector: '(?i)(?:\bin conclusion\b|\bultimately,|\bin summary\b|\bin closing\b|\bto sum up\b|\boverall,)'
+
+  - id: throat_clearing
+    detector: '(?i)\b(?:here[''’]s the thing|let me be clear|i[''’]ll be honest|let[''’]s dive in|let[''’]s unpack|in today[''’]s fast-paced (?:world|landscape|market)|in today[''’]s world|at the end of the day|when it comes to|at its core|that being said|going forward)\b'
+
+  - id: faux_insight
+    detector: '(?i)(?:\b(?:most people get wrong|nobody tells you|everyone misses|what if i told you|plot twist|here[''’]s the kicker|here[''’]s where it gets)\b|the best part\s*[?])'
+
+  - id: importance_puffery
+    detector: '(?i)\b(?:pivotal moment|vital role|testament to|(?:pivotal|crucial) role)\b'
+
+  - id: collaborative_artifacts
+    detector: '(?i)\b(?:i hope this helps|would you like me to|want me to|let me know if you(?:[''’]d| would) like|i hope this email finds you well|(?:sure|certainly|of course)[!.]\s+here(?:[''’]s| is))\b'
+
+  - id: narrative_cliches
+    severity: warn
+    detector: '(?i)\b(?:couldn[''’]t help but|heart pounding|washed over (?:me|him|her|us|them|you)|found solace|the human spirit|from that day (?:on|forward)|little did (?:i|we|he|she|they) know|a stark reminder|a cautionary tale|turn of events|stumbled upon|nestled (?:in|between|among|atop)|a glimpse into|bustling|enigmatic|captivating)\b'
+    message: Replace the stock narrative phrase with the specific sensation or detail.
+    exceptions: []
+
+  - id: significance_markers
+    severity: warn
+    detector: '(?i)\b(?:the part that (?:got|gets) me|what got me was|let that sink in|(?:that[''’]s|thats) the point|(?:that[''’]s|thats) what (?:kills|gets) me|which is exactly the (?:point|problem|part)|(?:that[''’]s|thats) the (?:[a-z]+ )?part)\b'
+    message: Delete the sentence that labels the moment as significant; repeat the concrete detail instead.
+    exceptions: []
+
+  - id: generation_artifacts
+    severity: warn
+    detector: '(?i)(?:\[\s*(?:insert|your|todo|tbd|placeholder|xxx)[^\]]{0,80}\]|\butm_source=chatgpt(?:\.com)?\b|\bas an? (?:ai|artificial intelligence)(?: language model)?\b|\bas a language model\b)'
+    message: 'Remove the generation artifact: placeholder text, model self-reference, or chatgpt.com tracking parameter.'
+    exceptions: []
+
+  - id: connector_openers
+    severity: info
+    detector: connector_openers
+    message: Replace the formal additive opener with also, and, or a plain sentence start.
+    exceptions: []

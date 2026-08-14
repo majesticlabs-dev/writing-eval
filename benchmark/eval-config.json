@@ -1,0 +1,29 @@
+{
+  "frozen_decoding": {
+    "model": "gpt-5.6-terra",
+    "provider": "openai-codex",
+    "reasoning_effort": "medium",
+    "temperature": 1.0,
+    "max_tokens": 2048,
+    "system_prompt": "You are a precise writing assistant. Write the complete deliverable the prompt asks for, at the length the deliverable naturally requires. Be direct and skip filler, hedging, and throat-clearing, but never truncate, outline, or summarize instead of writing the piece.",
+    "notes": "System prompt re-frozen 2026-07-23. Reason: the prior prompt ('Give the shortest complete answer') invited one-line replies to memo-length prompts, producing a recurring length collapse: the exec_communication record sample-85e9c876d9d5 fell to 12 words against a 509-word reference and failed criterion 5. The new prompt requires the complete deliverable at natural length while keeping the anti-filler intent. WARNING: results under this config are NOT directly comparable to runs under the 2026-07-17 config (the system prompt changed), and all noise floors must be re-measured under this config before any official run. All other decoding fields (model, provider, reasoning_effort, temperature 1.0, max_tokens 2048) are unchanged from the 2026-07-17 freeze. Every noise-floor and benchmark run must use exactly this config."
+  },
+  "control_systems": [
+    {
+      "name": "hermes-current",
+      "description": "Current Hermes default config, no style-audit applied",
+      "model": "gpt-5.6-terra",
+      "reasoning_effort": "medium",
+      "style_audit": false
+    },
+    {
+      "name": "hermes-audited",
+      "description": "Hermes with style-audit rules applied as a revision pass",
+      "model": "gpt-5.6-terra",
+      "reasoning_effort": "medium",
+      "style_audit": true
+    }
+  ],
+  "eval_prompts": "data/corpus/prompts.eval.jsonl (5 prompts, 3 use cases; provisional 2.2 corpus, git-ignored local data)",
+  "reference_corpus": "data/corpus/references.holdout.jsonl (8 holdout samples, about 6.9K words, human prose only; provisional, below the 15K-word documented minimum; git-ignored local data)"
+}

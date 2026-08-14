@@ -1,0 +1,9 @@
+*.venv/
+__pycache__/
+*.pyc
+uv.lock
+data/
+runs/*
+!runs/.gitkeep
+reports/
+.DS_Store

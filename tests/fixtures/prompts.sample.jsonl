@@ -1,0 +1,12 @@
+{"id":"prompt-001","use_case":"article_section","prompt":"Write a short section explaining why clear release notes reduce customer support work."}
+{"id":"prompt-002","use_case":"article_section","prompt":"Explain how small teams can choose useful product metrics without tracking everything."}
+{"id":"prompt-003","use_case":"article_section","prompt":"Describe the practical value of interviewing customers after they cancel a subscription."}
+{"id":"prompt-004","use_case":"article_section","prompt":"Write a brief section on why internal documentation should include decisions, not only procedures."}
+{"id":"prompt-005","use_case":"product_writing","prompt":"Write onboarding copy for a calendar tool that finds a meeting time across several time zones."}
+{"id":"prompt-006","use_case":"product_writing","prompt":"Write a concise feature announcement for saved filters in a project management app."}
+{"id":"prompt-007","use_case":"product_writing","prompt":"Write empty-state copy for an analytics dashboard that has not received data yet."}
+{"id":"prompt-008","use_case":"product_writing","prompt":"Write a short product description for an expense app that scans receipts and prepares reports."}
+{"id":"prompt-009","use_case":"exec_communication","prompt":"Write a brief update to leadership explaining that a launch will move back one week for reliability testing."}
+{"id":"prompt-010","use_case":"exec_communication","prompt":"Summarize a quarter in which revenue grew but customer retention declined."}
+{"id":"prompt-011","use_case":"exec_communication","prompt":"Ask department leads to submit next-quarter hiring priorities by Friday."}
+{"id":"prompt-012","use_case":"exec_communication","prompt":"Explain to the company that a planned office expansion has been paused to preserve cash."}

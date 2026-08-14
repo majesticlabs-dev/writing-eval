@@ -1,0 +1,250 @@
+version: 1
+rules:
+  - id: em_dash_ban
+    severity: warn
+    detector: '\u2014'
+    message: Replace the em dash with punctuation that fits the sentence.
+    exceptions: []
+
+  - id: en_dash_ban
+    severity: warn
+    detector: '[\u2013\u2015]'
+    message: Replace the en dash with punctuation that fits the sentence.
+    exceptions: []
+
+  - id: negative_parallelism
+    # Overlaps with the negative_listing detector by design: this rule catches
+    # within-sentence "not X, but Y" forms and that one catches consecutive
+    # "Not ..." sentence runs.
+    severity: warn
+    detector: '(?i)\bnot\s+[^.!?\n,]{1,120},\s*(?:it\s+is|it[''’]s|but)\s+[^.!?\n]+'
+    message: Rewrite negative parallelism as a direct positive statement.
+    exceptions: []
+
+  - id: polish_vocab
+    severity: warn
+    detector: '(?i)\b(?:delve|leverage|seamless|robust|elevate|foster|navigate|landscape|realm|tapestry|underscore|pillar|journey|utilize|facilitate|empower|streamline|beacon|multifaceted|meticulous|intricate|paramount|transformative|embark|supercharge|harness|ever-evolving|paradigm shift)\b'
+    message: Replace overused polish vocabulary with specific language.
+    exceptions: []
+
+  - id: metadiscourse_openers
+    severity: warn
+    detector: '(?i)\b(?:in this article,|in this section,|it is worth noting that|it is important to note that)'
+    message: Remove the metadiscourse opener and state the point directly.
+    exceptions: []
+
+  - id: repeated_openings
+    severity: info
+    detector: repeated_openings
+    message: Vary consecutive sentence openings.
+    exceptions: []
+
+  - id: vague_authority
+    severity: warn
+    detector: '(?i)\b(?:research shows|studies show|experts say|many people believe|experts agree|widely regarded)\b'
+    message: Name the source or remove the vague appeal to authority.
+    exceptions: []
+
+  - id: promotional_adjectives
+    severity: warn
+    detector: '(?i)\b(?:game-changing|revolutionary|cutting-edge|world-class|best-in-class)\b'
+    message: Replace promotional language with a concrete, supportable claim.
+    exceptions: []
+
+  - id: passive_voice
+    # The regular \w+ed participle branch is precision-first: it only fires
+    # when the participle ends the sentence or is followed by a likely agent,
+    # preposition, or frequency determiner. Adjectival participles with other
+    # continuations are left to the exception list, so unlisted ones can pass
+    # through undetected.
+    severity: info
+    detector: '(?i)\b(?:am|is|are|was|were|be|been|being)\s+(?:\w+ly\s+)?(?:\w+ed(?=$|[.,;:!?)\]\n]|\s+(?:by|with|in|on|at|to|from|for|as|after|before|during|through|into|under|over|within|without|each|every)\b)|written|broken|chosen|taken|given|driven|spoken|proven|shown|known|seen|done|made|born|built|sent|kept|told|found|held)\b'
+    message: Consider an active-voice rewrite; passive voice is a review candidate, not an error.
+    exceptions:
+      - interested
+      - excited
+      - tired
+      - located
+      - based
+      - used
+      - involved
+      - related
+      - detailed
+      - limited
+      - dedicated
+      - experienced
+      - advanced
+      - complicated
+      - concerned
+      - pleased
+      - delighted
+      - aged
+      - red
+      - bed
+      - sacred
+      - hundred
+      - indeed
+      - naked
+      - beloved
+      - wicked
+      - ragged
+
+  - id: hedging
+    severity: info
+    detector: '(?i)(?:\b(?:arguably|perhaps|somewhat|seemingly|presumably|relatively|fairly|possibly|conceivably|ostensibly)\b|\bit\s+could\s+be\s+said\b|\bin\s+some\s+ways\b|\bto\s+some\s+extent\b|\bmore\s+or\s+less\b|\b(?:a|some|this|what|any)\s+(?:kind|sort)\s+of\b|\bkind\s+of\b|\bsort\s+of\b)'
+    message: Consider a firmer claim; hedging language is a review candidate, not an error.
+    exceptions:
+      - a kind of
+      - some kind of
+      - this kind of
+      - what kind of
+      - any kind of
+      - a sort of
+      - some sort of
+
+  - id: hype_phrases
+    severity: warn
+    detector: '(?i)\b(?:this is huge|this changes everything)\b'
+    message: Replace hype with the concrete claim.
+    exceptions: []
+
+  - id: importance_puffery
+    severity: warn
+    detector: '(?i)\b(?:pivotal moment|vital role|testament to)\b'
+    message: State the fact and let readers judge significance.
+    exceptions: []
+
+  - id: throat_clearing
+    severity: warn
+    detector: '(?i)\b(?:here[''’]s the thing|let me be clear|i[''’]ll be honest|let[''’]s dive in|in today[''’]s world|at the end of the day|when it comes to|at its core|going forward)\b'
+    message: Cut the opener and state the point directly.
+    exceptions: []
+
+  - id: faux_insight
+    severity: warn
+    detector: '(?i)\b(?:most people get wrong|nobody tells you|everyone misses|what if i told you|plot twist)\b'
+    message: Drop the setup; let the claim stand on its own.
+    exceptions: []
+
+  - id: recap_endings
+    severity: info
+    detector: '(?i)(?:\bin conclusion\b|\bultimately,)'
+    message: End on the last concrete point instead of a recap.
+    exceptions: []
+
+  - id: superficial_analysis
+    severity: warn
+    detector: '(?i),\s+(?:highlighting|underscoring|demonstrating|showcasing|signaling|signalling|reflecting|emphasizing)\b'
+    message: Replace the trailing -ing clause with an explicit causal sentence or cut it.
+    exceptions: []
+
+  - id: negative_listing
+    severity: warn
+    detector: negative_listing
+    message: State the affirmative directly instead of stacking negations.
+    exceptions: []
+
+  - id: collaborative_artifacts
+    severity: info
+    detector: '(?i)\b(?:i hope this helps|would you like me to|want me to|let me know if you(?:[''’]d| would) like)\b'
+    message: Remove conversational handoff text that is not part of the deliverable.
+    exceptions: []
+
+  - id: knowledge_gap_boilerplate
+    severity: info
+    detector: '(?i)\b(?:up to my last training update|while specific details are (?:limited|scarce)|based on available information|it is believed that|likely (?:grew up|studied|began))\b'
+    message: State what is known, cite a source, or remove unsupported gap-filling language.
+    exceptions: []
+
+  - id: copula_avoidance
+    severity: info
+    detector: '(?i)\b(?:(?:serves|stands)\s+as|boasts)\b'
+    message: Consider a simpler is, are, or has construction.
+    exceptions: []
+
+  - id: generic_positive_conclusion
+    severity: info
+    detector: '(?i)\b(?:the future looks bright|exciting times (?:lie|are) ahead|a major step in the right direction)\b'
+    message: End on the last concrete fact or a specific next action.
+    exceptions: []
+
+  - id: inline_header_list
+    severity: info
+    detector: '(?m)^\s*[-*+]\s+\*\*[^*:\n]{1,80}(?:\*\*:|:\*\*)'
+    message: Consider replacing repeated inline list headers with direct prose or a table.
+    exceptions: []
+
+  - id: fragmented_header
+    severity: info
+    detector: fragmented_header
+    message: Remove the short warmup after the heading or merge it into the substantive paragraph.
+    exceptions: []
+
+  - id: manufactured_staccato
+    severity: info
+    detector: manufactured_staccato
+    message: Combine some consecutive short sentences unless the clipped rhythm is deliberate.
+    exceptions: []
+
+  - id: aphorism_formula
+    severity: info
+    detector: '(?i)\b(?:\w+\s+is\s+the\s+(?:language|currency|architecture)\s+of|\w+\s+becomes\s+a\s+trap|not\s+a\s+\w+\s+but\s+a\s+mirror)\b'
+    message: Replace the aphorism formula with the concrete claim it represents.
+    exceptions: []
+
+  - id: theatrical_opener
+    severity: info
+    detector: '(?im)^(?:honestly\?|real talk[:,]|look[:,])\s*'
+    message: Remove the staged conversational opener and state the point directly.
+    exceptions: []
+
+  - id: filler_phrases
+    severity: warn
+    detector: '(?i)\b(?:in order to|due to the fact that|at this point in time|in the event that|for the purpose of|has the ability to|a large number of)\b'
+    message: Replace the filler phrase with its shorter equivalent.
+    exceptions: []
+
+  - id: predicate_hyphenation
+    severity: info
+    detector: '(?i)\b(?:is|are|was|were|looks|seems)[ \t]+[a-z]+-[a-z]+\b(?![ \t]+\w)'
+    message: Remove the hyphen from the predicate compound.
+    exceptions: []
+
+  - id: false_range
+    severity: info
+    detector: '(?im)\bfrom[ \t]+(?!(?:\d|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|morning|afternoon|evening|night|noon|midnight)\b)[a-z][a-z''’-]*(?:[ \t]+[a-z][a-z''’-]*)?[ \t]+to[ \t]+(?!(?:\d|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|morning|afternoon|evening|night|noon|midnight)\b)[a-z][a-z''’-]*(?:[ \t]+[a-z][a-z''’-]*)?(?=[.,;:!?)]|$)'
+    message: Replace the false range with the specific items or relationship.
+    exceptions: []
+
+  - id: diff_anchored
+    severity: warn
+    detector: '(?i)\b(?:this was added to|this replaces the|previously caused|we changed this to|instead of the old)\b'
+    message: Describe the current state, not the change.
+    exceptions: []
+
+  - id: title_case_heading
+    severity: info
+    detector: '(?m)^#{1,6}[ \t]+\S+(?=(?:[^\n]*\b[A-Z][a-z]+\b){3})[^\n]*$'
+    message: Use sentence case for the heading.
+    exceptions: []
+
+  - id: emoji_usage
+    severity: warn
+    detector: '[\u2700-\u27BF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F900-\U0001F9FF](?:\uFE0F|\u200D[\u2700-\u27BF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F900-\U0001F9FF]\uFE0F?)*'
+    message: Remove the emoji.
+    exceptions: []
+
+  - id: subjectless_fragment
+    # The participle vocabulary here is intentionally separate from the
+    # passive_voice rule: this detector targets fixed fragment shapes, not
+    # general passive constructions.
+    severity: info
+    detector: '(?m)(?:^|(?<=[.!?])[ \t]+)(?:No[ \t]+[A-Za-z][\w''’-]*[ \t]+(?:needed|required|preserved|saved|stored|generated|updated|created|included|provided|configured|installed|enabled|disabled|removed|added|completed|finished|supported|protected|encrypted|validated|verified|processed|retained)|[A-Z][\w''’-]*(?:[ \t]+[a-z][\w''’-]*)?[ \t]+(?:preserved|saved|stored|generated|updated|created|included|provided|required|needed|configured|installed|enabled|disabled|removed|added|completed|finished|supported|protected|encrypted|validated|verified|processed|retained)(?:[ \t]+[a-z]+ly)?)\.'
+    message: Add a subject and finite verb to the fragment.
+    exceptions: []
+
+  - id: boldface_density
+    severity: info
+    detector: boldface_density
+    message: Reduce bold emphasis or convert the paragraph to prose or a table.
+    exceptions: []
