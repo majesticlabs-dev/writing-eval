@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
 from writing_eval.profile_cache import (
+    _atomic_write_json,
     _reference_texts,
     load_reference_stats,
     refresh_reference_caches,
@@ -66,7 +68,7 @@ def test_write_failure_cleans_up_temporary_file(tmp_path: Path, monkeypatch) -> 
     def _boom(*args, **kwargs):
         raise OSError("disk full")
 
-    monkeypatch.setattr("writing_eval.profile_cache.json.dump", _boom)
+    monkeypatch.setattr("writing_eval.profile_atomic.json.dump", _boom)
     with pytest.raises(OSError):
         write_reference_caches(
             profile.directory, profile.references_path, ["text."], rules
@@ -120,3 +122,51 @@ def test_reference_texts_rejects_whitespace_only_ids_and_preserves_nonblank_ids(
     )
     with pytest.raises(ProfileError, match=r"duplicate reference id '  a  '.*line 2"):
         _reference_texts(path)
+
+
+def test_bool_and_negative_counts_are_cache_misses(tmp_path: Path) -> None:
+    root = _build_demo(tmp_path)
+    profile = load_profile(root, "demo")
+    rules = _builtin_rules()
+    fingerprint = rules_fingerprint(rules)
+    tokens_path = profile.directory / "cache" / "tokens.json"
+    original = tokens_path.read_text(encoding="utf-8")
+    payload = json.loads(original)
+    key = next(iter(payload["token_counts"]))
+
+    for mutation in (
+        {"word_count": True},
+        {"word_count": -1},
+        {"token_counts": {**payload["token_counts"], key: True}},
+        {"token_counts": {**payload["token_counts"], key: -3}},
+    ):
+        tokens_path.write_text(original, encoding="utf-8")
+        updated = json.loads(original)
+        updated.update(mutation)
+        tokens_path.write_text(json.dumps(updated), encoding="utf-8")
+        stats, status = load_reference_stats(profile, rules, fingerprint)
+        assert status == "recomputed"
+        assert stats.word_count > 0
+
+
+def test_fdopen_failure_closes_raw_descriptor_and_cleans_tmp(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    closed: list[int] = []
+    real_close = os.close
+
+    def tracking_close(fd: int) -> None:
+        closed.append(fd)
+        real_close(fd)
+
+    def fail_fdopen(fd: int, *args, **kwargs):
+        raise OSError("fdopen failed")
+
+    monkeypatch.setattr("writing_eval.profile_atomic.os.fdopen", fail_fdopen)
+    monkeypatch.setattr("writing_eval.profile_atomic.os.close", tracking_close)
+    target = tmp_path / "tokens.json"
+    with pytest.raises(OSError, match="fdopen failed"):
+        _atomic_write_json(target, {"schema": 1})
+    assert closed
+    assert not target.exists()
+    assert list(tmp_path.glob(".*.tmp")) == []

@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 import hashlib
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+import tomllib
 from typing import Any
 
 from .metrics import (
@@ -22,6 +24,22 @@ from .metrics_distribution import (
 )
 from .metrics_quality import readability_scores
 from .metrics_structure import sentence_length_stats
+
+_TOOL_NAME = "writing-eval"
+_SOURCE_PYPROJECT = Path(__file__).resolve().parents[2] / "pyproject.toml"
+
+
+def _tool_version() -> str:
+    try:
+        return version(_TOOL_NAME)
+    except PackageNotFoundError:
+        with _SOURCE_PYPROJECT.open("rb") as handle:
+            project_version = tomllib.load(handle).get("project", {}).get("version")
+        if not isinstance(project_version, str) or not project_version.strip():
+            raise ValueError(
+                f"could not determine {_TOOL_NAME} version from {_SOURCE_PYPROJECT}"
+            ) from None
+        return project_version
 
 
 def _flatten_findings(findings_per_text: Any) -> list[Any]:
@@ -72,6 +90,10 @@ def build_provenance(
         len(tokenize(str(record.get("text", "")))) for record in reference_records
     )
     return {
+        "tool": {
+            "name": _TOOL_NAME,
+            "version": _tool_version(),
+        },
         "reference_corpus": {
             "path": str(reference_path),
             "record_count": len(reference_records),

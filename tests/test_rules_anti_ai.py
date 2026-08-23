@@ -85,12 +85,22 @@ def test_significance_markers_ignore_factual_comparisons(auditor: StyleAuditor) 
 
 def test_generation_artifacts_flag_placeholders_and_leaks(auditor: StyleAuditor) -> None:
     assert len(findings_for(auditor, "generation_artifacts", "See [insert example] for details.")) == 1
+    assert len(findings_for(auditor, "generation_artifacts", "See [insert here] for details.")) == 1
+    assert len(findings_for(auditor, "generation_artifacts", "Mark [todo] before publish.")) == 1
+    assert len(findings_for(auditor, "generation_artifacts", "Fill [tbd] later.")) == 1
+    assert len(findings_for(auditor, "generation_artifacts", "Leave [placeholder] out.")) == 1
+    assert len(findings_for(auditor, "generation_artifacts", "Scratch [xxx] from the draft.")) == 1
     assert len(findings_for(auditor, "generation_artifacts", "Read more at https://x.dev/a?utm_source=chatgpt.com")) == 1
     assert len(findings_for(auditor, "generation_artifacts", "As an AI language model, I cannot browse.")) == 1
 
 
 def test_generation_artifacts_ignore_plain_model_mentions(auditor: StyleAuditor) -> None:
     assert not findings_for(auditor, "generation_artifacts", "The draft reads like a language model wrote it.")
+
+
+def test_generation_artifacts_ignore_ordinary_your_brackets(auditor: StyleAuditor) -> None:
+    assert not findings_for(auditor, "generation_artifacts", "Open [your account] to continue.")
+    assert not findings_for(auditor, "generation_artifacts", "Ask [your team] for the numbers.")
 
 
 def test_generation_artifacts_ignore_markdown_links(auditor: StyleAuditor) -> None:

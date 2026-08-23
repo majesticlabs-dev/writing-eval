@@ -8,14 +8,39 @@ from pathlib import Path
 import re
 
 from .profile_analysis import profile_statistics
+from .profile_atomic import _commit_staged, _hash_file, _stage_text
 from .profile_cache import write_reference_caches
 from .profile_models import METRICS_VERSION, Profile, ProfileError
 from .segmentation import tokenize
 from .style_audit import BUILTIN_RULES_PATH, Rule, load_rules
 
 _FRONTMATTER_RE = re.compile(r"\A---\r?\n.*?\r?\n---\r?\n?", re.DOTALL)
+_SHA256_HEX_RE = re.compile(r"\A[0-9a-f]{64}\Z")
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 _SOURCE_SUFFIXES = frozenset({".md", ".txt"})
+
+
+def validate_profile_name(name: str) -> str:
+    """Return ``name`` when it is a single non-absolute profile component."""
+
+    if not isinstance(name, str):
+        raise ProfileError(
+            f"invalid profile name {name!r}: expected a single non-absolute "
+            "path component that is not '.' or '..'"
+        )
+    path = Path(name)
+    if (
+        name in {"", ".", ".."}
+        or path.is_absolute()
+        or len(path.parts) != 1
+        or path.parts[0] in {".", ".."}
+        or path.name != name
+    ):
+        raise ProfileError(
+            f"invalid profile name {name!r}: expected a single non-absolute "
+            "path component that is not '.' or '..'"
+        )
+    return name
 
 
 def _strip_frontmatter(text: str) -> str:
@@ -27,6 +52,12 @@ def _strip_frontmatter(text: str) -> str:
 
 def _slug(stem: str) -> str:
     return _SLUG_RE.sub("-", stem.lower()).strip("-") or "doc"
+
+
+def _rebuild_instruction(name: str) -> str:
+    return (
+        f"rebuild it with `writing-eval profile build {name} --from <sources>`"
+    )
 
 
 def _resolve_sources(source_paths: Iterable[Path | str]) -> list[Path]:
@@ -48,11 +79,12 @@ def _resolve_sources(source_paths: Iterable[Path | str]) -> list[Path]:
     return [resolved[key] for key in sorted(resolved)]
 
 
-def _write_references(path: Path, records: Sequence[dict]) -> None:
-    with path.open("w", encoding="utf-8") as handle:
-        for record in sorted(records, key=lambda item: item["id"]):
-            handle.write(json.dumps(record, ensure_ascii=True))
-            handle.write("\n")
+def _references_text(records: Sequence[dict]) -> str:
+    chunks = [
+        json.dumps(record, ensure_ascii=True)
+        for record in sorted(records, key=lambda item: item["id"])
+    ]
+    return "".join(f"{chunk}\n" for chunk in chunks)
 
 
 def _validate_profile_summary(data: object) -> str | None:
@@ -64,6 +96,10 @@ def _validate_profile_summary(data: object) -> str | None:
     if isinstance(total_words, bool) or not isinstance(total_words, (int, float)):
         return "total_words field is not a number"
     return None
+
+
+def _exact_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def build_profile(
@@ -80,6 +116,7 @@ def build_profile(
     cache under ``out_dir/cache/``; ``None`` uses the builtin rule set.
     """
 
+    validate_profile_name(name)
     files = _resolve_sources(source_paths)
     if not files:
         raise ProfileError("no .md or .txt source files found")
@@ -121,11 +158,18 @@ def build_profile(
     }
     out_dir.mkdir(parents=True, exist_ok=True)
     references_path = out_dir / "references.jsonl"
-    _write_references(references_path, records)
-    (out_dir / "profile.json").write_text(
-        json.dumps(profile_data, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    profile_path = out_dir / "profile.json"
+    staged_refs = _stage_text(references_path, _references_text(records))
+    try:
+        profile_data["references_sha256"] = _hash_file(Path(staged_refs))
+        staged_profile = _stage_text(
+            profile_path,
+            json.dumps(profile_data, indent=2, sort_keys=True) + "\n",
+        )
+    except Exception:
+        Path(staged_refs).unlink(missing_ok=True)
+        raise
+    _commit_staged([(staged_refs, references_path), (staged_profile, profile_path)])
     effective_rules = load_rules(BUILTIN_RULES_PATH) if rules is None else rules
     write_reference_caches(out_dir, references_path, texts, effective_rules)
     return profile_data
@@ -134,6 +178,7 @@ def build_profile(
 def load_profile(profiles_root: Path | str, name: str) -> Profile:
     """Load a named profile from ``profiles_root/name``."""
 
+    validate_profile_name(name)
     directory = Path(profiles_root) / name
     if not directory.is_dir():
         raise ProfileError(f"profile not found: {name} (looked in {directory})")
@@ -141,22 +186,39 @@ def load_profile(profiles_root: Path | str, name: str) -> Profile:
     references_path = directory / "references.jsonl"
     if not profile_path.is_file():
         raise ProfileError(f"profile metadata not found: {profile_path}")
-    if not references_path.is_file():
-        raise ProfileError(f"profile references not found: {references_path}")
     try:
         data = json.loads(profile_path.read_text(encoding="utf-8"))
     except UnicodeDecodeError as exc:
         raise ProfileError(f"could not decode {profile_path} as UTF-8: {exc}") from None
     except (OSError, json.JSONDecodeError) as exc:
         raise ProfileError(f"could not read profile {name}: {exc}") from None
-    if not isinstance(data, dict) or not isinstance(data.get("statistics"), dict):
+    error = _validate_profile_summary(data)
+    if error is not None:
+        raise ProfileError(error)
+    if not isinstance(data.get("statistics"), dict):
         raise ProfileError(f"invalid profile metadata: {profile_path}")
     found_version = data.get("metrics_version")
-    if found_version != METRICS_VERSION:
+    if not _exact_int(found_version) or found_version != METRICS_VERSION:
         raise ProfileError(
             f"profile {name!r} uses metric semantics version {found_version!r}, "
-            f"expected {METRICS_VERSION}; rebuild it with "
-            f"`writing-eval profile build {name} --from <sources>`"
+            f"expected {METRICS_VERSION}; {_rebuild_instruction(name)}"
+        )
+    if not references_path.is_file():
+        raise ProfileError(f"profile references not found: {references_path}")
+    found_hash = data.get("references_sha256")
+    if not isinstance(found_hash, str) or _SHA256_HEX_RE.match(found_hash) is None:
+        raise ProfileError(
+            f"profile {name!r} missing or invalid references_sha256; "
+            f"{_rebuild_instruction(name)}"
+        )
+    try:
+        installed_hash = _hash_file(references_path)
+    except OSError as exc:
+        raise ProfileError(f"could not read {references_path}: {exc}") from None
+    if found_hash != installed_hash:
+        raise ProfileError(
+            f"profile {name!r} references_sha256 does not match installed "
+            f"references; {_rebuild_instruction(name)}"
         )
     return Profile(name, directory, references_path, data)
 
@@ -168,9 +230,10 @@ def list_profiles(
 ) -> list[dict]:
     """Return profile summaries ordered by name.
 
-    ``on_skip``, when provided, receives the profile directory and error text
-    for every profile that cannot be read; without it the function stays
-    silent and simply omits unreadable profiles.
+    Only profiles that ``load_profile`` accepts are listed. ``on_skip``, when
+    provided, receives the profile directory and error text for every profile
+    that cannot be read; without it the function stays silent and omits
+    unreadable profiles.
     """
 
     root = Path(profiles_root)
@@ -182,21 +245,16 @@ def list_profiles(
         if not child.is_dir() or not profile_path.is_file():
             continue
         try:
-            data = json.loads(profile_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            profile = load_profile(root, child.name)
+        except ProfileError as exc:
             if on_skip is not None:
                 on_skip(child, str(exc))
             continue
-        error = _validate_profile_summary(data)
-        if error is not None:
-            if on_skip is not None:
-                on_skip(child, error)
-            continue
         summaries.append(
             {
-                "name": child.name,
-                "sources": len(data["sources"]),
-                "total_words": data["total_words"],
+                "name": profile.name,
+                "sources": len(profile.data["sources"]),
+                "total_words": profile.data["total_words"],
             }
         )
     return summaries

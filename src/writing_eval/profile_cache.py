@@ -21,11 +21,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import hashlib
 import json
-import os
 from pathlib import Path
-import tempfile
 from typing import Any
 
+from .profile_atomic import _atomic_write_json, _hash_file
 from .profile_models import Profile, ProfileError
 from .segmentation import tokenize
 from .style_audit import Rule, audit_text, rules_fingerprint
@@ -69,14 +68,6 @@ def _rules_cache_filename(fingerprint: str) -> str:
     return f"rules-{fingerprint[:16]}.json"
 
 
-def _hash_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 16), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _read_json_object(path: Path) -> dict[str, Any] | None:
     """Read and decode a cache file. Any failure is a silent miss, never a raise."""
 
@@ -88,9 +79,14 @@ def _read_json_object(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _exact_nonnegative_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
 def _is_count_mapping(value: Any) -> bool:
     return isinstance(value, dict) and all(
-        isinstance(key, str) and isinstance(count, int) for key, count in value.items()
+        isinstance(key, str) and _exact_nonnegative_int(count)
+        for key, count in value.items()
     )
 
 
@@ -112,27 +108,11 @@ def _valid_entry(
     if fingerprint is not None and data.get("rules_fingerprint") != fingerprint:
         return None
     counts_key = "rule_counts" if fingerprint is not None else "token_counts"
-    if not isinstance(data.get("word_count"), int):
+    if not _exact_nonnegative_int(data.get("word_count")):
         return None
     if not _is_count_mapping(data.get(counts_key)):
         return None
     return data
-
-
-def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(
-        dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp"
-    )
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-            handle.flush()
-        os.replace(tmp_name, path)
-    except Exception:
-        Path(tmp_name).unlink(missing_ok=True)
-        raise
 
 
 def _prune_stale_rules_caches(cache_dir: Path, current_filename: str) -> None:

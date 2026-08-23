@@ -72,6 +72,17 @@ def test_sentence_opener_returns_letter_led_word_offset() -> None:
     assert text[0:5] == "Hello"
 
 
+def test_sentence_opener_keeps_apostrophes_and_hyphens() -> None:
+    for text, expected in (
+        ("We\u2019ll ship.", "We\u2019ll"),
+        ("We'll ship.", "We'll"),
+        ("Well-known things matter.", "Well-known"),
+    ):
+        opener = sentence_opener(text, 0, len(text))
+        assert opener is not None
+        assert text[opener[0] : opener[1]] == expected
+
+
 def test_sentence_opener_is_none_when_no_letter_led_word() -> None:
     text = "123 456."
     assert tokenize(text) == ["123", "456"]

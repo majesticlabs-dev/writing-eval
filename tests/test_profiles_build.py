@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -9,9 +10,7 @@ from writing_eval.profiles import ProfileError, build_profile, load_profile
 from tests.helpers_profiles import (
     PROSE_ONE,
     PROSE_TWO,
-    _build_demo,
     _write_sources,
-    run_cli,
 )
 
 
@@ -44,6 +43,11 @@ def test_build_writes_profile_json_schema(tmp_path: Path) -> None:
     assert profile["total_words"] == sum(
         source["word_count"] for source in profile["sources"]
     )
+    expected_hash = hashlib.sha256(
+        (out / "references.jsonl").read_bytes()
+    ).hexdigest()
+    assert profile["references_sha256"] == expected_hash
+    assert len(profile["references_sha256"]) == 64
     statistics = profile["statistics"]
     assert set(statistics) == {
         "mean_sentence_length",

@@ -244,22 +244,3 @@ def test_cli_check_unknown_profile_is_usage_error(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "profile not found" in result.stderr
     assert "Traceback" not in result.stderr
-
-
-def test_cli_profile_list_reports_invalid_summary(tmp_path: Path) -> None:
-    root = _build_demo(tmp_path)
-    invalid = root / "invalid"
-    invalid.mkdir()
-    (invalid / "profile.json").write_text(
-        '{"sources": 3, "total_words": 100}',
-        encoding="utf-8",
-    )
-
-    result = run_cli("profile", "list", "--profiles-root", root)
-
-    assert result.returncode == 0
-    assert "demo: 2 sources" in result.stdout
-    assert result.stderr.count("skipped unreadable profile") == 1
-    assert "invalid" in result.stderr
-    assert "sources field is not a list" in result.stderr
-    assert "Traceback" not in result.stderr

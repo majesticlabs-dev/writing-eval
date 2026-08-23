@@ -140,41 +140,39 @@ def run(args: argparse.Namespace, context: CommandContext) -> int:
     text = _read_input(args.path)
     rules = context.load_rules(args.rules)
     findings = context.audit_text(text, rules)
-    profile = None
-    if style is not None:
-        try:
-            profile = load_profile(args.profiles_root, style)
-        except ProfileError as exc:
-            raise UserError(str(exc)) from None
     draft_counts = Counter(tokenize(text))
     word_count = sum(draft_counts.values())
     display_name = "<stdin>" if args.path == "-" else args.path
-    if profile is not None:
-        reference_stats, cache_status = load_reference_stats(
-            profile, rules, rules_fingerprint(rules)
-        )
-        if cache_status != "cache":
-            print(
-                f"note: profile {profile.name!r} reference cache unavailable "
-                "(recomputed); run `writing-eval profile cache` to refresh it",
-                file=sys.stderr,
+    if style is not None:
+        try:
+            profile = load_profile(args.profiles_root, style)
+            reference_stats, cache_status = load_reference_stats(
+                profile, rules, rules_fingerprint(rules)
             )
-        l2 = token_1gram_l2_from_counts(draft_counts, reference_stats.token_counts)
-        result = _check_result(display_name, text, findings, word_count, l2)
-        rule_baseline = build_rule_baseline(
-            reference_stats.rule_counts,
-            reference_stats.word_count,
-            result["findings"],
-            result["metrics"]["word_count"],
-        )
-        _mark_within_allowance(result["findings"], rule_baseline)
-        result["style_gap"] = build_style_gap(
-            profile.name, text, profile.statistics, reference_stats.token_counts
-        )
-        result["assessment"] = build_assessment(
-            text, result["findings"], result["metrics"], result["quality_metrics"],
-            result["style_gap"], profile.statistics, rule_baseline,
-        )
+            if cache_status != "cache":
+                print(
+                    f"note: profile {profile.name!r} reference cache unavailable "
+                    "(recomputed); run `writing-eval profile cache` to refresh it",
+                    file=sys.stderr,
+                )
+            l2 = token_1gram_l2_from_counts(draft_counts, reference_stats.token_counts)
+            result = _check_result(display_name, text, findings, word_count, l2)
+            rule_baseline = build_rule_baseline(
+                reference_stats.rule_counts,
+                reference_stats.word_count,
+                result["findings"],
+                result["metrics"]["word_count"],
+            )
+            _mark_within_allowance(result["findings"], rule_baseline)
+            result["style_gap"] = build_style_gap(
+                profile.name, text, profile.statistics, reference_stats.token_counts
+            )
+            result["assessment"] = build_assessment(
+                text, result["findings"], result["metrics"], result["quality_metrics"],
+                result["style_gap"], profile.statistics, rule_baseline,
+            )
+        except ProfileError as exc:
+            raise UserError(str(exc)) from None
     else:
         references_path = args.references
         references_provided = references_path is not None

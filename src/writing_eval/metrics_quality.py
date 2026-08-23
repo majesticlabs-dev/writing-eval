@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+import math
+from numbers import Real
 
 from .segmentation import segment, tokenize
 
@@ -35,13 +37,13 @@ def _count_syllables(word: str) -> int:
     return max(count, 1)
 
 
-def _sentence_count(text: str) -> int:
-    return sum(len(group) for group in segment(text))
-
-
 def _readability_counts(text: str) -> tuple[int, int, int] | None:
-    tokens = tokenize(text)
-    sentences = _sentence_count(text)
+    tokens: list[str] = []
+    sentences = 0
+    for group in segment(text):
+        sentences += len(group)
+        for start, end in group:
+            tokens.extend(tokenize(text[start:end]))
     if not tokens or sentences == 0:
         return None
     return len(tokens), sentences, sum(_count_syllables(token) for token in tokens)
@@ -74,7 +76,7 @@ def flesch_kincaid_grade(text: str) -> float | None:
 def _as_tokens(text_or_tokens: str | Sequence[str]) -> list[str]:
     if isinstance(text_or_tokens, str):
         return tokenize(text_or_tokens)
-    return [str(token) for token in text_or_tokens]
+    return [str(token).lower() for token in text_or_tokens]
 
 
 def _mtld_factor_sum(tokens: Sequence[str], threshold: float) -> float:
@@ -87,19 +89,26 @@ def _mtld_factor_sum(tokens: Sequence[str], threshold: float) -> float:
         types.add(token)
         segment_len += 1
         ttr = len(types) / segment_len
-        if index == last_index:
-            factor_sum += (1.0 - ttr) / (1.0 - threshold)
-        elif ttr < threshold:
+        if ttr < threshold:
             factor_sum += 1.0
             types = set()
             segment_len = 0
             ttr = 1.0
+        elif index == last_index:
+            factor_sum += 1.0
     return factor_sum
 
 
 def mtld(text_or_tokens: str | Sequence[str], threshold: float = 0.72) -> float | None:
     """Return the Measure of Textual Lexical Diversity."""
 
+    if (
+        isinstance(threshold, bool)
+        or not isinstance(threshold, Real)
+        or not math.isfinite(threshold)
+        or not 0.0 < threshold < 1.0
+    ):
+        raise ValueError("threshold must be a finite real number between 0 and 1")
     tokens = _as_tokens(text_or_tokens)
     if len(tokens) < 10:
         return None

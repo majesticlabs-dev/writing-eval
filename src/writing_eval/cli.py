@@ -16,7 +16,7 @@ if str(_SRC) not in sys.path:
 
 import yaml
 
-from writing_eval import cli_check, cli_eval, cli_profile, style_audit
+from writing_eval import cli_check, cli_eval, cli_profile
 from writing_eval.cli_check_render import render_check_text as _render_check_text
 from writing_eval.cli_support import (
     CommandContext,
@@ -25,27 +25,24 @@ from writing_eval.cli_support import (
     load_jsonl_records,
     write_text_file,
 )
+from writing_eval.style_audit_engine import audit_text
+from writing_eval.style_audit_rules import load_rules
 
 
 def _load_rules(rules_path: Path) -> Any:
     if not rules_path.is_file():
         raise UserError(f"style-audit rules file not found: {rules_path}")
     try:
-        rules = style_audit.load_rules(rules_path)
-        if rules is None:
-            raise ValueError("load_rules returned no rule set")
+        rules = load_rules(rules_path)
         if len(rules) == 0:
             raise ValueError("load_rules returned an empty rule set")
         return rules
-    except Exception as exc:
+    except (OSError, UnicodeDecodeError, yaml.YAMLError, ValueError) as exc:
         raise UserError(f"could not load style-audit rules: {exc}") from None
 
 
 def _audit_text(text: str, rules: Any) -> list[Any]:
-    try:
-        return list(style_audit.audit_text(text, rules) or [])
-    except Exception as exc:
-        raise UserError(f"style audit failed: {exc}") from None
+    return list(audit_text(text, rules))
 
 
 def _rules_version(rules_path: Path) -> Any:

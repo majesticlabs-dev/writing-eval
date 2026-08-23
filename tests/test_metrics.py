@@ -67,6 +67,10 @@ def test_repeated_openings_use_adjacent_sentence_pairs() -> None:
     assert repeated_opening_rate("We go. They stay. We leave.") == 0.0
 
 
+def test_repeated_openings_keep_curly_apostrophe_in_opener() -> None:
+    assert repeated_opening_rate("We\u2019ll go. We\u2019ll stay.") == 1.0
+
+
 def test_repeated_opening_corpus_rate_ignores_document_boundaries_and_order() -> None:
     documents = ["We go.", "We stay. They leave."]
     assert repeated_opening_corpus_rate(documents) == 0.0
@@ -152,6 +156,18 @@ def test_from_counts_functions_are_empty_safe() -> None:
     assert token_1gram_l2_from_counts({}, Counter(tokenize("reference"))) is None
     assert token_1gram_l2_from_counts(Counter(tokenize("output")), {}) is None
     assert top_overrepresented_from_counts({}, Counter(tokenize("reference"))) == []
+
+
+def test_normalized_from_counts_rejects_negative_counts() -> None:
+    from writing_eval.metrics_distribution import normalized_from_counts
+
+    with pytest.raises(ValueError, match="count for token 'a' must not be negative"):
+        normalized_from_counts({"a": -1, "b": 2})
+
+
+def test_token_1gram_l2_from_counts_rejects_zero_total_side() -> None:
+    assert token_1gram_l2_from_counts({"a": 0, "b": 0}, {"a": 1}) is None
+    assert token_1gram_l2_from_counts({"a": 1}, {"a": 0, "b": 0}) is None
 
 
 def test_metrics_are_deterministic_across_repeated_calls() -> None:

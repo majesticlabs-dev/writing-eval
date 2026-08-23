@@ -37,7 +37,7 @@ rules:
 
   - id: generation_artifacts
     severity: warn
-    detector: '(?i)(?:\[\s*(?:insert|your|todo|tbd|placeholder|xxx)[^\]]{0,80}\]|\butm_source=chatgpt(?:\.com)?\b|\bas an? (?:ai|artificial intelligence)(?: language model)?\b|\bas a language model\b)'
+    detector: '(?i)(?:\[\s*(?:insert|todo|tbd|placeholder|xxx)[^\]]{0,80}\]|\butm_source=chatgpt(?:\.com)?\b|\bas an? (?:ai|artificial intelligence)(?: language model)?\b|\bas a language model\b)'
     message: 'Remove the generation artifact: placeholder text, model self-reference, or chatgpt.com tracking parameter.'
     exceptions: []
 

@@ -113,3 +113,58 @@ def test_three_aligned_output_fixtures_have_required_fields() -> None:
             assert set(record) == {"id", "text"}
             assert isinstance(record["id"], str) and record["id"]
             assert isinstance(record["text"], str) and record["text"].strip()
+
+
+# Distinctive topic markers for prompt-output pairing. Each suffix requires
+# those substrings in the prompt, the aligned reference, and every output
+# record with the same numeric suffix. A swapped or unrelated record fails.
+TOPIC_MARKERS = {
+    "001": {"prompt": ("release notes",), "text": ("release notes",)},
+    "002": {"prompt": ("product metrics",), "text": ("metric",)},
+    "003": {"prompt": ("cancel",), "text": ("cancel",)},
+    "004": {"prompt": ("documentation",), "text": ("procedure",)},
+    "005": {"prompt": ("time zone",), "text": ("time zone",)},
+    "006": {"prompt": ("saved filters",), "text": ("filter",)},
+    "007": {"prompt": ("dashboard",), "text": ("source",)},
+    "008": {"prompt": ("receipt",), "text": ("receipt",)},
+    "009": {"prompt": ("launch", "reliability"), "text": ("launch", "week")},
+    "010": {"prompt": ("revenue", "retention"), "text": ("revenue", "retention")},
+    "011": {"prompt": ("hiring", "friday"), "text": ("hiring", "friday")},
+    "012": {"prompt": ("office expansion",), "text": ("office", "expansion")},
+}
+
+
+def test_fixture_prompt_output_pairing_matches_topics() -> None:
+    prompts = {
+        numeric_suffix(record["id"]): record for record in load_jsonl(PROMPTS_PATH)
+    }
+    references = {
+        numeric_suffix(record["id"]): record for record in load_jsonl(REFERENCES_PATH)
+    }
+    outputs_by_suffix = [
+        {numeric_suffix(record["id"]): record for record in load_jsonl(path)}
+        for path in OUTPUT_PATHS
+    ]
+
+    assert set(TOPIC_MARKERS) == set(prompts)
+    assert set(TOPIC_MARKERS) == set(references)
+    for outputs in outputs_by_suffix:
+        assert set(TOPIC_MARKERS) == set(outputs)
+
+    for suffix, markers in TOPIC_MARKERS.items():
+        prompt_text = prompts[suffix]["prompt"].casefold()
+        for marker in markers["prompt"]:
+            assert marker.casefold() in prompt_text, (
+                f"prompt {suffix} missing topic marker {marker!r}"
+            )
+
+        aligned_texts = [
+            references[suffix]["text"],
+            *(outputs[suffix]["text"] for outputs in outputs_by_suffix),
+        ]
+        for text in aligned_texts:
+            folded = text.casefold()
+            for marker in markers["text"]:
+                assert marker.casefold() in folded, (
+                    f"fixture {suffix} missing topic marker {marker!r} in aligned text"
+                )

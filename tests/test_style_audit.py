@@ -182,6 +182,13 @@ def test_finding_line_numbers_are_stable_across_newlines() -> None:
     assert [finding.line_number for finding in findings] == [1, 4]
 
 
+def test_finding_line_number_after_exactly_one_newline() -> None:
+    rule = next(rule for rule in load_rules(RULE_PATH) if rule.id == "polish_vocab")
+    text = "We leverage the API.\nThe tool can leverage existing workflows."
+    findings = audit_text(text, [rule])
+    assert [finding.line_number for finding in findings] == [1, 2]
+
+
 def test_exception_text_adjacent_to_candidate_does_not_suppress() -> None:
     rule = next(rule for rule in load_rules(RULE_PATH) if rule.id == "polish_vocab")
     excepted_rule = replace(rule, exceptions=("approved",))
@@ -199,6 +206,58 @@ def test_exception_red_does_not_suppress_candidate_stored() -> None:
     text = "The red car was stored in the garage."
     findings = audit_text(text, [excepted_rule])
     assert [finding.matched_text for finding in findings] == ["was stored"]
+
+
+def test_exception_casefold_treats_eszett_as_ss(tmp_path: Path) -> None:
+    folded = tmp_path / "folded.yaml"
+    folded.write_text(
+        "rules:\n"
+        "  - id: street\n"
+        "    severity: warn\n"
+        "    detector: '(?i)ss'\n"
+        "    message: Scaffold.\n"
+        "    exceptions:\n"
+        "      - '\u00df'\n",
+        encoding="utf-8",
+    )
+    inverse = tmp_path / "inverse.yaml"
+    inverse.write_text(
+        "rules:\n"
+        "  - id: street\n"
+        "    severity: warn\n"
+        "    detector: '\u00df'\n"
+        "    message: Scaffold.\n"
+        "    exceptions:\n"
+        "      - ss\n",
+        encoding="utf-8",
+    )
+    bare = tmp_path / "bare.yaml"
+    bare.write_text(
+        "rules:\n"
+        "  - id: street\n"
+        "    severity: warn\n"
+        "    detector: '(?i)ss'\n"
+        "    message: Scaffold.\n"
+        "    exceptions: []\n",
+        encoding="utf-8",
+    )
+    assert audit_text("ss", load_rules(folded)) == []
+    assert audit_text("\u00df", load_rules(inverse)) == []
+    assert [finding.matched_text for finding in audit_text("ss", load_rules(bare))] == ["ss"]
+    whole_word = tmp_path / "whole.yaml"
+    whole_word.write_text(
+        "rules:\n"
+        "  - id: street\n"
+        "    severity: warn\n"
+        "    detector: '(?i)\\bstrasse\\b'\n"
+        "    message: Scaffold.\n"
+        "    exceptions:\n"
+        "      - '\u00df'\n",
+        encoding="utf-8",
+    )
+    findings = audit_text("strasse", load_rules(whole_word))
+    assert [finding.matched_text for finding in findings] == ["strasse"]
+
 
 
 def test_invalid_rule_raises_value_error(tmp_path: Path) -> None:

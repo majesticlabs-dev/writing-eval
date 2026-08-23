@@ -13,6 +13,7 @@ from .style_audit_models import Rule, VALID_SEVERITIES
 from .style_audit_overlay import resolve_raw_rules
 
 _REQUIRED_FIELDS = ("id", "severity", "detector", "message")
+_ALLOWED_FIELDS = (*_REQUIRED_FIELDS, "exceptions")
 _IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
@@ -39,6 +40,14 @@ def _parse_rule(raw_rule: Any, index: int) -> Rule:
     missing = [field for field in _REQUIRED_FIELDS if field not in raw_rule]
     if missing:
         raise ValueError(f"{label} is missing required field(s): {', '.join(missing)}")
+    unknown = [key for key in raw_rule if key not in _ALLOWED_FIELDS]
+    if unknown:
+        allowed = ", ".join(_ALLOWED_FIELDS)
+        raise ValueError(
+            f"{label} has unsupported field(s): "
+            f"{', '.join(str(key) for key in unknown)}; "
+            f"allowed fields are: {allowed}"
+        )
     rule_id = _require_nonempty_string(raw_rule["id"], "id", label)
     severity = _require_nonempty_string(raw_rule["severity"], "severity", label)
     detector = _require_nonempty_string(raw_rule["detector"], "detector", label)
@@ -53,6 +62,8 @@ def _parse_rule(raw_rule: Any, index: int) -> Rule:
         isinstance(exception, str) for exception in raw_exceptions
     ):
         raise ValueError(f"{label} exceptions must be a list of strings")
+    if any(not exception.strip() for exception in raw_exceptions):
+        raise ValueError(f"{label} exceptions must not contain empty strings")
     detector_function = NAMED_DETECTORS.get(detector)
     compiled_pattern: re.Pattern[str] | None = None
     if detector_function is None:

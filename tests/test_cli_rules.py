@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tests.helpers_cli import load_run_eval_module, write_jsonl
 
 
@@ -79,3 +81,35 @@ def test_empty_style_rule_set_is_clean_user_error(tmp_path: Path, capsys) -> Non
     assert result == 1
     assert "empty rule set" in captured.err
     assert "Traceback" not in captured.err
+
+
+def test_style_audit_programming_defect_propagates(tmp_path: Path) -> None:
+    module = load_run_eval_module()
+
+    def boom(_text: str, _rules: object) -> list:
+        raise RuntimeError("engine exploded")
+
+    module._audit_text = boom
+    outputs, references = eval_inputs(tmp_path)
+    with pytest.raises(RuntimeError, match="engine exploded"):
+        module.main(
+            [
+                "eval",
+                "--outputs", str(outputs),
+                "--references", str(references),
+                "--report", str(tmp_path / "report.md"),
+            ]
+        )
+
+
+def test_check_audit_programming_defect_propagates(tmp_path: Path) -> None:
+    module = load_run_eval_module()
+
+    def boom(_text: str, _rules: object) -> list:
+        raise RuntimeError("engine exploded")
+
+    module._audit_text = boom
+    draft = tmp_path / "draft.md"
+    draft.write_text("Hello world.\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="engine exploded"):
+        module.main(["check", str(draft)])

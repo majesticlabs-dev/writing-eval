@@ -8,10 +8,10 @@ class ProfileError(Exception):
     """An expected profile build, load, or lookup error."""
 
 
-# Bump when corpus-statistic semantics change (for example the syllable
-# heuristic). Profiles built with a different version must be rebuilt so
-# stored statistics stay comparable with freshly computed draft metrics.
-METRICS_VERSION = 1
+# Version 2 changes curly-apostrophe openers, markdown-aware readability word
+# counts, and MTLD tail, threshold, and sequence-input semantics. Rebuild older
+# profiles so stored statistics stay comparable with fresh draft metrics.
+METRICS_VERSION = 2
 
 
 @dataclass(frozen=True)

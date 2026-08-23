@@ -60,6 +60,11 @@ def normalized_from_counts(
     calculated, so remaining rates are relative to the kept tokens only.
     """
 
+    for token, count in counts.items():
+        if count < 0:
+            raise ValueError(
+                f"count for token {token!r} must not be negative, got {count}"
+            )
     if exclude is not None:
         counts = {
             token: count for token, count in counts.items() if token not in exclude
@@ -86,6 +91,8 @@ def token_1gram_l2_from_counts(
         return None
     output_distribution = normalized_from_counts(output_counts)
     reference_distribution = normalized_from_counts(reference_counts)
+    if not output_distribution or not reference_distribution:
+        return None
     # Sum over a fixed, sorted vocabulary order: the cached path builds its
     # distribution from a JSON-loaded dict and the live path from a Counter,
     # so raw-set iteration order (and thus float summation order) can

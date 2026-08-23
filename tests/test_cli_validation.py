@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-from tests.helpers_cli import cli_with_inputs, run_cli, write_jsonl
+import pytest
+
+from tests.helpers_cli import cli_with_inputs, load_run_eval_module, run_cli, write_jsonl
 
 def test_invalid_utf8_references_is_clean_user_error(tmp_path: Path) -> None:
     outputs = tmp_path / "outputs"
@@ -141,3 +143,39 @@ def test_output_systems_require_identical_ids_but_references_can_differ(
     )
     assert rejected.returncode == 1
     assert "identical id sets" in rejected.stderr
+
+
+def test_invalid_utf8_rules_file_is_clean_user_error(tmp_path: Path) -> None:
+    outputs = tmp_path / "outputs"
+    outputs.mkdir()
+    write_jsonl(outputs / "system.jsonl", [{"id": "out-1", "text": "Output text here."}])
+    references = tmp_path / "references.jsonl"
+    write_jsonl(references, [{"id": "ref-1", "text": "Reference text here."}])
+    rules = tmp_path / "rules.yaml"
+    rules.write_bytes(b"rules:\n  - id: probe\n    severity: warn\n    detector: x\n    message: bad \xff\n")
+    result = run_cli(
+        "--outputs",
+        outputs,
+        "--references",
+        references,
+        "--report",
+        tmp_path / "report.md",
+        "--rules",
+        rules,
+    )
+    assert result.returncode == 1
+    assert "could not load style-audit rules" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_check_audit_programming_defect_is_not_user_error(tmp_path: Path) -> None:
+    module = load_run_eval_module()
+
+    def boom(_text: str, _rules: object) -> list:
+        raise RuntimeError("engine exploded")
+
+    module._audit_text = boom
+    draft = tmp_path / "draft.md"
+    draft.write_text("Hello world.\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="engine exploded"):
+        module.main(["check", str(draft)])

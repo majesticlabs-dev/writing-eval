@@ -87,10 +87,18 @@ def _load_eval_word_counts(path: Path) -> dict[str, int]:
                         "expected a nonempty string id"
                     )
                 word_count = record.get("word_count")
-                if isinstance(word_count, bool) or not isinstance(word_count, int):
+                if (
+                    isinstance(word_count, bool)
+                    or not isinstance(word_count, int)
+                    or word_count < 0
+                ):
                     raise UserError(
                         f"invalid record in {path} at line {line_number}: "
-                        "expected an integer word_count"
+                        "expected a non-negative integer word_count"
+                    )
+                if record_id in counts:
+                    raise UserError(
+                        f"duplicate id {record_id!r} in {path} at line {line_number}"
                     )
                 counts[record_id] = word_count
     except UnicodeDecodeError as exc:
