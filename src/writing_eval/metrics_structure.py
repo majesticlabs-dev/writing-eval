@@ -43,8 +43,7 @@ def _opener_groups(text: str) -> list[list[str]]:
         openers: list[str] = []
         for start, end in group:
             opener = sentence_opener(text, start, end)
-            if opener is not None:
-                openers.append(text[opener[0] : opener[1]].casefold())
+            openers.append(text[opener[0] : opener[1]].casefold())
         groups.append(openers)
     return groups
 

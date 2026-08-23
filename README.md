@@ -189,26 +189,37 @@ structure differ. The author's own voice is just one profile among many.
 ### Build a profile
 
 ```bash
-./writing-eval profile build <name> --from <dir-or-files...> [--profiles-root data/profiles]
+./writing-eval profile build <name> --from <dir-or-files...> [--profiles-root data/profiles] [--rules PATH]
 ```
 
+`<name>` must be exactly one non-absolute path component. `.`, `..`, absolute
+paths, and nested names are rejected.
+
 `--from` accepts directories (their `.md` and `.txt` files are ingested
-recursively) or individual files. A leading YAML frontmatter block is stripped
-from each source, and each document becomes one reference record with a stable
-ID derived from its filename. The command writes two files into
+recursively) or individual files. `--rules` selects the rule file used to
+precompute the profile cache (default: the builtin rule set). A leading YAML
+frontmatter block is stripped from each source, and each document becomes one
+reference record with a stable ID derived from its filename. The command writes
+two files into
 `<profiles-root>/<name>/`:
 
 - `references.jsonl`: one `{"id", "text", "file"}` record per source document,
   reused as the reference corpus by `check --style`.
 - `profile.json`: the profile name, its creation date, a numeric
-  `metrics_version` field, per-source word counts, the total word count, and
-  the corpus statistics (mean sentence length and variance, repeated-opening
-  rate, Flesch reading ease and grade, MTLD, paragraph statistics, and the top
-  20 content tokens after a small stop list).
+  `metrics_version` field (currently 2), a `references_sha256` digest of the
+  paired `references.jsonl` file, per-source word counts, the total word
+  count, and the corpus statistics (mean sentence length and variance,
+  repeated-opening rate, Flesch reading ease and grade, MTLD, paragraph
+  statistics, and the top 20 content tokens after a small stop list).
 
 `metrics_version` pins the metric semantics the stored statistics were computed
-with. When a release changes those semantics, older profiles are rejected with
-a rebuild instruction until `profile build` runs again with the current tool.
+with. Version 2 covers curly-apostrophe (U+2019) sentence openers,
+markdown-aware readability word counts, and MTLD tail, threshold, and
+sequence-input lowercase behavior. Older profiles are rejected with a rebuild
+instruction until `profile build` runs again with the current tool.
+`references_sha256` binds `profile.json` to the installed `references.jsonl`.
+A missing, invalid, or mismatched digest is the same rebuild error, so a mixed
+pair from an interrupted write is not loaded.
 
 For example, put all articles for one author under a dedicated directory:
 
@@ -323,16 +334,24 @@ one-article profile rather than add that article to the existing profile.
 ./writing-eval profile list [--profiles-root data/profiles]
 ```
 
-One line per profile: name, source count, and total words.
+One line per profile that `load_profile` accepts: name, source count, and total
+words. Directories that fail that load (wrong `metrics_version`, mismatched
+`references_sha256`, unreadable metadata) are omitted. The CLI prints a skip
+note on stderr for each omitted directory.
 
 ### Profile cache
 
 `profile build` precomputes reference statistics into `<profile>/cache/`.
-After a rule change, refresh that cache with
-`writing-eval profile cache <name> [--rules PATH]`. Caches also invalidate
-automatically when detector or tokenizer code changes in a new release, since
-each entry records a digest of that code. Checks remain correct with a stale
-or missing cache; they only get slower until the cache is rebuilt.
+After a rule change, refresh that cache with:
+
+```bash
+./writing-eval profile cache <name> [--rules PATH]
+```
+
+`--rules` must match the rule file that later `check` runs will use. Caches
+also invalidate automatically when detector or tokenizer code changes in a new
+release, since each entry records a digest of that code. Checks remain correct
+with a stale or missing cache; they only get slower until the cache is rebuilt.
 
 ### Check a draft against a profile
 
@@ -604,12 +623,12 @@ or quoted at length in tracked files.
 ## Metrics
 
 - **Tell rate by severity**: style findings in a severity group per 1,000 output words. Lower values indicate fewer detected tendencies.
-- **Token 1-gram L2**: Euclidean distance between normalized output and reference token frequency vectors. Lower values indicate closer vocabulary distributions.
+- **Token 1-gram L2**: Euclidean distance between normalized output and reference token frequency vectors. Lower values indicate closer vocabulary distributions. Reported as `n/a` when either side has zero tokens.
 - **Overrepresented terms**: tokens whose output frequency most exceeds their reference frequency. Counts or rates explain the ranking.
 - **Shared tokenization**: lowercase word tokens keep ASCII and curly-apostrophe contractions together.
 - **Mean sentence length**: average number of words per sentence.
 - **Sentence length variance**: population variance of sentence word counts. It describes how much sentence lengths vary within the corpus.
-- **Repeated opening rate**: share of adjacent sentence pairs that begin with the same normalized opening. The denominator is the number of adjacent sentence pairs, or zero when fewer than two sentences exist.
+- **Repeated opening rate**: share of adjacent sentence pairs that begin with the same normalized opening. The denominator is the number of adjacent sentence pairs, or zero when fewer than two sentences exist. Openers keep curly apostrophes (U+2019), so a contraction such as We'll is one opener unit, matching tokenization.
 
 ### Quality metrics (informational)
 
@@ -620,14 +639,19 @@ and reading grade contribute only to the versioned heuristic alignment score
 described above; MTLD and paragraph statistics remain informational.
 
 - **Flesch reading ease** and **Flesch-Kincaid grade**: standard readability
-  scores from word, sentence, and syllable counts. Syllable counts use a
+  scores from word, sentence, and syllable counts. Word and sentence counts
+  use the same markdown-aware segmentation as mean sentence length: headings
+  are excluded and list markers are stripped. Syllable counts use a
   vowel-group heuristic with silent terminal `-e`, `-es`, and `-ed`
   adjustments, not a dictionary, so individual word estimates can be wrong.
   Reported as `n/a` when the text has no sentence.
 - **MTLD**: Measure of Textual Lexical Diversity, the mean length of word runs
   that keep a type-token ratio above 0.72, averaged over forward and backward
-  passes. Higher means more varied vocabulary. Reported as `n/a` below 10 tokens,
-  where the measure is unreliable.
+  passes. Higher means more varied vocabulary. Reported as `n/a` below 10
+  tokens, where the measure is unreliable. An unfinished tail that stays
+  above the threshold counts as one factor, so a fully unique 10-token input
+  returns 10.0. The threshold must be a finite value in `(0, 1)`. Token-sequence
+  inputs are lowercased to match text inputs.
 - **Paragraph statistics**: markdown-aware paragraph count, mean sentences per
   paragraph, and single-sentence paragraph rate. Paragraphs are blank-line
   separated and headings are excluded, so results depend on the input's markdown
@@ -662,9 +686,14 @@ uv run python scripts/run_eval.py --outputs path/to/outputs --references path/to
 
 The command reads each output JSONL file, evaluates its text, compares it with the reference corpus, and writes a Markdown report to the requested path.
 
-The optional `--json` path writes the same report data as JSON. Both formats
-include provenance for the reference corpus and style rule set: source paths,
-record or rule counts, content SHA-256 hashes, and the rule-set version.
+The optional `--json` path writes the same report data as JSON. JSON
+provenance includes the tool name `writing-eval`, the installed package
+version, and identity for the reference corpus and style rule set: source
+paths, record or rule counts, content SHA-256 hashes, and the rule-set
+version. The Markdown report renders the reference-corpus and rule-set
+provenance; it does not render tool identity. Markdown reports keep the
+caller-supplied system order. JSONL writers keep object key order from dict
+insertion.
 
 For a checked repository run against test fixtures, use:
 
@@ -737,14 +766,14 @@ Style rules live in YAML. Each rule has these fields:
 | `severity` | Finding category used to group and normalize tell rates. |
 | `detector` | Regex configuration or named detector that identifies the tendency. |
 | `message` | Clear diagnostic text shown when the rule matches. |
-| `exceptions` | Explicit cases the detector should ignore. An exception suppresses a match only when it overlaps the matched span (case-insensitive, whole words or phrases), not when it appears elsewhere on the same line. Use an empty list when none apply. |
+| `exceptions` | Explicit cases the detector should ignore. An exception suppresses a match only when it overlaps the candidate's own context after Unicode casefold, using whole words or phrases. For regex rules that context is the match span. For named detectors it can be a larger candidate-owned span. Empty or whitespace-only exception strings are rejected at load. Use an empty list when none apply. |
 | `enabled` | Merge-time directive, valid only in an overlay. `enabled: false` removes the named rule from the effective set. It is not a field of a loaded rule. |
 
 `id`, `severity`, `detector`, and `message` are required when you define a brand-new
 rule id. When you override an existing rule id in an overlay, supply only the fields
 you want to change.
 
-Rules are validated when loaded, after any overlay merge. Missing fields, unsupported detectors, and malformed definitions should fail with a clear error.
+Rules are validated when loaded, after any overlay merge. Missing fields, unknown keys in standalone rule files, empty exception strings, unsupported detectors, and malformed definitions fail with a clear error. `enabled` is overlay-only.
 
 #### The builtin rule set
 
@@ -817,8 +846,10 @@ is the builtin rules plus four appended rules:
   "little did I know", "stumbled upon".
 - `significance_markers`: meta commentary that labels a moment instead of
   showing it, such as "that's the part that got me", "let that sink in".
-- `generation_artifacts`: placeholder brackets, `utm_source=chatgpt.com` links,
-  and model self-reference such as "as an AI language model".
+- `generation_artifacts`: bracketed scaffolding tokens (`insert`, `todo`,
+  `tbd`, `placeholder`, `xxx`), `utm_source=chatgpt.com` links, and model
+  self-reference such as "as an AI language model". Ordinary bracketed phrases
+  such as `[your account]` are not flagged.
 - `connector_openers`: sentence-initial "furthermore", "moreover",
   "additionally".
 
@@ -851,6 +882,9 @@ single drafts.
 - Distributional scores (token 1-gram L2 and the top overrepresented terms) depend heavily on the composition and size of the chosen reference corpus or profile; small profiles make them noisy.
 - L2 distance is sensitive to output length, so systems whose word counts differ a lot are not directly comparable on it.
 - Benchmark generation uses a frozen decoding config and measured per-metric noise floors (`benchmark/THRESHOLDS.md`); deltas below the documented floor are inconclusive.
+- Existing profiles with metric semantics other than version 2 must be rebuilt before use.
+- Readability scores ignore heading text and list markers, so heading-heavy Markdown can differ from a plain-text reading.
+- `profile list` omits directories that `load_profile` rejects.
 
 ## License and contributions
 

@@ -18,7 +18,7 @@ def test_revise_mode_zero_findings_makes_no_codex_call(tmp_path: Path) -> None:
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path)
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "Ignored."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "Ignored."}])
     source_path = tmp_path / "source.jsonl"
     clean_text = "This text has no style violations of any kind present."
     write_jsonl(source_path, [{"id": "p-1", "text": clean_text}])
@@ -52,7 +52,7 @@ def test_revise_mode_loop_stops_once_reaudit_is_clean(tmp_path: Path) -> None:
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path)
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "Ignored."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "Ignored."}])
     source_path = tmp_path / "source.jsonl"
     dirty_text = "This text has an em" + _EM_DASH + "dash violation in it."
     write_jsonl(source_path, [{"id": "p-1", "text": dirty_text}])
@@ -92,7 +92,7 @@ def test_revise_loop_is_capped_at_two_iterations(tmp_path: Path) -> None:
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path)
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "Ignored."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "Ignored."}])
     source_path = tmp_path / "source.jsonl"
     dirty_text = "This text has an em" + _EM_DASH + "dash violation in it."
     write_jsonl(source_path, [{"id": "p-1", "text": dirty_text}])
@@ -137,8 +137,8 @@ def test_missing_source_id_is_a_clean_usage_error_exit_2(tmp_path: Path) -> None
     write_jsonl(
         prompts_path,
         [
-            {"id": "p-1", "use_case": "a", "prompt": "First."},
-            {"id": "p-missing", "use_case": "a", "prompt": "Second."},
+            {"id": "p-1", "use_case": "article_section", "prompt": "First."},
+            {"id": "p-missing", "use_case": "article_section", "prompt": "Second."},
         ],
     )
     source_path = tmp_path / "source.jsonl"
@@ -166,7 +166,7 @@ def test_revise_mode_requires_source_argument(tmp_path: Path) -> None:
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path)
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "First."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "First."}])
     out_path = tmp_path / "out.jsonl"
 
     result = run_generate_runs(

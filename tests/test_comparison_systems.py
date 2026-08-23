@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import pytest
 
 from writing_eval.comparison import compare_systems, render_comparison_markdown
@@ -87,3 +89,82 @@ def test_comparison_markdown_is_deterministic() -> None:
     assert first == second
     assert chr(0x2014) not in first
     assert chr(0x2013) not in first
+
+
+def test_compare_systems_rejects_nonfinite_metric_values() -> None:
+    report = make_report(
+        [
+            make_system("sys-a", base_metrics(tell_rate=math.nan)),
+            make_system("sys-b", base_metrics(tell_rate=1.0)),
+        ]
+    )
+    with pytest.raises(ValueError, match="metric 'tell_rate' value_a is not a finite number"):
+        compare_systems(report, None, None, "sys-a", "sys-b")
+
+    report = make_report(
+        [
+            make_system("sys-a", base_metrics(tell_rate=1.0)),
+            make_system("sys-b", base_metrics(tell_rate=math.inf)),
+        ]
+    )
+    with pytest.raises(ValueError, match="metric 'tell_rate' value_b is not a finite number"):
+        compare_systems(report, None, None, "sys-a", "sys-b")
+
+
+def test_compare_systems_rejects_nonfinite_floor() -> None:
+    report = make_report(
+        [
+            make_system("sys-a", base_metrics(tell_rate=1.0)),
+            make_system("sys-b", base_metrics(tell_rate=3.0)),
+        ]
+    )
+    floor = {
+        "tell_rate": {
+            "floor": math.nan,
+            "system": "sys-a",
+            "n_runs_min": 5,
+            "bound_only": False,
+        }
+    }
+    with pytest.raises(ValueError, match="metric 'tell_rate' floor is not a finite number"):
+        compare_systems(report, None, floor, "sys-a", "sys-b")
+
+
+def test_compare_systems_rejects_boolean_metric_values() -> None:
+    report = make_report(
+        [
+            make_system("sys-a", base_metrics(tell_rate=True)),
+            make_system("sys-b", base_metrics(tell_rate=1.0)),
+        ]
+    )
+    with pytest.raises(ValueError, match="metric 'tell_rate' value_a is not a finite number"):
+        compare_systems(report, None, None, "sys-a", "sys-b")
+
+    report = make_report(
+        [
+            make_system("sys-a", base_metrics(tell_rate=1.0)),
+            make_system("sys-b", base_metrics(tell_rate=False)),
+        ]
+    )
+    with pytest.raises(ValueError, match="metric 'tell_rate' value_b is not a finite number"):
+        compare_systems(report, None, None, "sys-a", "sys-b")
+
+
+def test_compare_systems_rejects_boolean_floor() -> None:
+    report = make_report(
+        [
+            make_system("sys-a", base_metrics(tell_rate=1.0)),
+            make_system("sys-b", base_metrics(tell_rate=3.0)),
+        ]
+    )
+    floor = {
+        "tell_rate": {
+            "floor": True,
+            "system": "sys-a",
+            "n_runs_min": 5,
+            "bound_only": False,
+        }
+    }
+    with pytest.raises(ValueError, match="metric 'tell_rate' floor is not a finite number"):
+        compare_systems(report, None, floor, "sys-a", "sys-b")
+

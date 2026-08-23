@@ -14,17 +14,17 @@ from .style_audit_rules import load_rules
 
 @lru_cache(maxsize=None)
 def _exception_pattern(exception: str) -> re.Pattern[str]:
-    # Exceptions match whole words or phrases, case-insensitively, so an
+    # Exceptions match whole words or phrases after casefold, so an
     # exception like "red" cannot suppress a match on "stored".
-    return re.compile(
-        rf"(?<![\w'\u2019]){re.escape(exception)}(?![\w'\u2019])",
-        re.IGNORECASE,
-    )
+    folded = exception.casefold()
+    return re.compile(rf"(?<![\w'\u2019]){re.escape(folded)}(?![\w'\u2019])")
 
 
 def _is_excepted(rule: Rule, context: str) -> bool:
+    folded_context = context.casefold()
     return any(
-        _exception_pattern(exception).search(context) for exception in rule.exceptions
+        _exception_pattern(exception).search(folded_context)
+        for exception in rule.exceptions
     )
 
 

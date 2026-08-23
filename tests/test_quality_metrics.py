@@ -56,6 +56,20 @@ def test_flesch_returns_none_for_empty_input() -> None:
     assert flesch_kincaid_grade("## Heading only") is None
 
 
+def test_flesch_readability_excludes_heading_words() -> None:
+    prose = "One two three four five."
+    with_heading = "## Heading words here\n\n" + prose
+    assert flesch_reading_ease(with_heading) == flesch_reading_ease(prose)
+    assert flesch_kincaid_grade(with_heading) == flesch_kincaid_grade(prose)
+
+
+def test_flesch_readability_excludes_inline_numbered_list_markers() -> None:
+    listed = "1. Use short subjects. 2. Use active verbs."
+    plain = "Use short subjects. Use active verbs."
+    assert flesch_reading_ease(listed) == flesch_reading_ease(plain)
+    assert flesch_kincaid_grade(listed) == flesch_kincaid_grade(plain)
+
+
 def test_mtld_returns_none_below_ten_tokens() -> None:
     assert mtld("one two three") is None
     assert mtld(["word"] * 9) is None
@@ -65,6 +79,33 @@ def test_mtld_returns_none_below_ten_tokens() -> None:
 def test_mtld_accepts_text_or_tokens_identically() -> None:
     text = "alpha beta gamma delta echo foxtrot golf hotel india juliet"
     assert mtld(text) == mtld(tokenize(text))
+
+
+def test_mtld_unique_tokens_equal_token_count() -> None:
+    assert mtld([f"word{index}" for index in range(10)]) == 10.0
+    assert mtld([f"word{index}" for index in range(20)]) == 20.0
+
+
+@pytest.mark.parametrize("threshold", [0, 1, -0.1, float("nan"), "0.72", True])
+def test_mtld_rejects_invalid_threshold(threshold: object) -> None:
+    with pytest.raises(ValueError):
+        mtld([f"word{index}" for index in range(10)], threshold=threshold)
+
+
+def test_mtld_lowercases_sequence_inputs_like_text_inputs() -> None:
+    tokens = [
+        "Alpha",
+        "alpha",
+        "Beta",
+        "beta",
+        "Alpha",
+        "alpha",
+        "Beta",
+        "beta",
+        "Alpha",
+        "alpha",
+    ]
+    assert mtld(tokens) == mtld(" ".join(token.lower() for token in tokens))
 
 
 def test_mtld_is_higher_for_more_diverse_text() -> None:

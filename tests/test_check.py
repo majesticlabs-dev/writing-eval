@@ -1,9 +1,11 @@
+import hashlib
 import json
 from pathlib import Path
 import subprocess
 import sys
 
 from tests.helpers_cli import run_cli
+from tests.helpers_profiles import _build_demo
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,8 +30,7 @@ def test_clean_file_exits_zero(tmp_path: Path) -> None:
     assert "metrics:" in result.stdout
     assert "word_count:" in result.stdout
 
-
-def test_default_check_uses_v3_diagnostics(tmp_path: Path) -> None:
+def test_default_check_reports_json_findings(tmp_path: Path) -> None:
     draft = tmp_path / "draft.md"
     draft.write_text("I hope this helps. The steps are below.\n", encoding="utf-8")
     result = run_cli("check", draft, "--format", "json")
@@ -240,3 +241,37 @@ def test_unwritable_json_output_is_clean_user_error(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "could not write" in result.stderr
     assert "Traceback" not in result.stderr
+
+
+def test_malformed_profile_references_are_clean_user_error(tmp_path: Path) -> None:
+    root = _build_demo(tmp_path)
+    profile_dir = root / "demo"
+    cache_dir = profile_dir / "cache"
+    if cache_dir.is_dir():
+        for child in cache_dir.iterdir():
+            child.unlink()
+    malformed_refs = b'{"id": "alpha", "text": "bad \xff byte"}\n'
+    (profile_dir / "references.jsonl").write_bytes(malformed_refs)
+    profile_path = profile_dir / "profile.json"
+    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    profile["references_sha256"] = hashlib.sha256(malformed_refs).hexdigest()
+    profile_path.write_text(json.dumps(profile), encoding="utf-8")
+    draft = tmp_path / "draft.md"
+    draft.write_text("We write clearly. Editors revise carefully.\n", encoding="utf-8")
+
+    result = run_cli(
+        "check",
+        draft,
+        "--style",
+        "demo",
+        "--profiles-root",
+        root,
+        "--format",
+        "json",
+    )
+
+    assert result.returncode == 1
+    assert "could not decode" in result.stderr
+    assert "UTF-8" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert len(result.stderr.strip().splitlines()) == 1

@@ -9,13 +9,24 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
+_PROMPT_USE_CASES = (
+    "article_section",
+    "product_writing",
+    "exec_communication",
+)
+_PROMPT_USE_CASE_SET = frozenset(_PROMPT_USE_CASES)
+
 
 class UsageError(Exception):
     """An expected command-line, configuration, or input-data error."""
 
 
 def load_jsonl_records(
-    path: Path, field_name: str, description: str
+    path: Path,
+    field_name: str,
+    description: str,
+    *,
+    validate_prompt_use_case: bool = False,
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
@@ -46,6 +57,19 @@ def load_jsonl_records(
                         f"invalid record in {path} at line {line_number}: "
                         f"expected a nonempty string {field_name!r}"
                     )
+                if validate_prompt_use_case:
+                    use_case = record.get("use_case")
+                    if not isinstance(use_case, str) or not use_case.strip():
+                        raise UsageError(
+                            f"invalid record in {path} at line {line_number}: "
+                            "expected a nonempty string use_case"
+                        )
+                    if use_case not in _PROMPT_USE_CASE_SET:
+                        allowed = ", ".join(_PROMPT_USE_CASES)
+                        raise UsageError(
+                            f"invalid record in {path} at line {line_number}: "
+                            f"use_case must be one of {allowed}"
+                        )
                 if record_id in seen_ids:
                     raise UsageError(
                         f"duplicate id {record_id!r} in {path} at line {line_number}"
@@ -62,7 +86,9 @@ def load_jsonl_records(
 
 
 def load_prompts(path: Path) -> list[dict[str, Any]]:
-    return load_jsonl_records(path, "prompt", "prompts")
+    return load_jsonl_records(
+        path, "prompt", "prompts", validate_prompt_use_case=True
+    )
 
 
 def load_id_text_map(path: Path, field_name: str, description: str) -> dict[str, str]:
@@ -126,6 +152,7 @@ def write_meta(
         "config": {
             "model": config["model"],
             "reasoning_effort": config["reasoning_effort"],
+            "system_prompt": config["system_prompt"],
         },
         "prompts": str(args.prompts),
         "mode": args.mode,

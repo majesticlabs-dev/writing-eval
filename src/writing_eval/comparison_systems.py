@@ -3,9 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import math
 from typing import Any
 
 from .comparison_shared import format_value, system_map
+
+
+def _finite_number(value: Any, what: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{what} is not a finite number")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{what} is not a finite number")
+    return number
 
 
 def compare_systems(
@@ -35,15 +45,21 @@ def compare_systems(
             delta = None
             verdict = "undefined"
         else:
-            delta = float(value_b) - float(value_a)
+            number_a = _finite_number(value_a, f"metric {metric_name!r} value_a")
+            number_b = _finite_number(value_b, f"metric {metric_name!r} value_b")
+            delta = number_b - number_a
             metric_floor = floor.get(metric_name) if floor else None
             floor_value = metric_floor.get("floor") if metric_floor else None
             if floor is None or metric_floor is None or floor_value is None:
                 verdict = "no_floor"
-            elif abs(delta) <= floor_value:
-                verdict = "inconclusive_below_noise_floor"
             else:
-                verdict = "actionable"
+                floor_number = _finite_number(
+                    floor_value, f"metric {metric_name!r} floor"
+                )
+                if abs(delta) <= floor_number:
+                    verdict = "inconclusive_below_noise_floor"
+                else:
+                    verdict = "actionable"
         metrics_out[metric_name] = {
             "value_a": value_a,
             "value_b": value_b,

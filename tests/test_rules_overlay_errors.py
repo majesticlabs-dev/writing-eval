@@ -180,3 +180,13 @@ def test_fingerprint_changes_on_override_addition_and_removal(rules_root: Path) 
         rules_fingerprint(load_rules(removed)),
     }
     assert len(digests) == 4
+
+
+def test_blank_exception_in_an_override_is_rejected_after_merge(rules_root: Path) -> None:
+    base = base_file(rules_root)
+    overlay = write(
+        rules_root / "overlay.yaml",
+        f"extends: {base.name}\nrules:\n  - id: alpha\n    exceptions: ['']\n",
+    )
+    with pytest.raises(ValueError, match="empty strings"):
+        load_rules(overlay)

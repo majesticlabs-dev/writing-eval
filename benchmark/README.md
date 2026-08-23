@@ -22,3 +22,21 @@ Codex is not required for the other benchmark scripts when their input corpora
 already exist. `THRESHOLDS.md` preserves the pre-registered decision criteria
 and noise-floor provenance. `SAMPLES.md` preserves corpus selection and split
 provenance.
+
+Corpus admission is manual curation. `collect_samples` rejects empty text
+only. There is no live minimum-token bar. `SAMPLES.md` remains a sealed
+historical provenance record and is not a live admission rule.
+
+Prompt records must include a `use_case` of `article_section`,
+`product_writing`, or `exec_communication`. Invalid or missing values fail
+at load.
+
+Future generation runs write `meta.json` with all three frozen decoding
+fields: `model`, `reasoning_effort`, and `system_prompt`. Resume-mode
+metadata for `status`, `revision_iterations`, and `residual_findings`
+remains deferred.
+
+Comparison and eval-set loaders reject non-finite metric and floor values,
+duplicate eval IDs, and negative word counts. Sealed threshold and sample
+records are never rewritten.
+

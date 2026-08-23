@@ -16,7 +16,7 @@ from tests.helpers_generate_runs import (
 
 def _write_prompt(tmp_path: Path, prompt: str = "Hi.") -> Path:
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": prompt}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": prompt}])
     return prompts_path
 
 
@@ -218,7 +218,10 @@ def test_invalid_utf8_prompts_and_config_are_clean_user_errors(
     assert "Traceback" not in result.stderr
 
     config_path.write_bytes(b'{"frozen_decoding": {"model": "\xff"}}')
-    prompts_path.write_text('{"id": "p-1", "prompt": "Hi."}\n', encoding="utf-8")
+    prompts_path.write_text(
+        '{"id": "p-1", "use_case": "article_section", "prompt": "Hi."}\n',
+        encoding="utf-8",
+    )
     result = run_generate_runs(
         tmp_path,
         "--prompts", prompts_path,

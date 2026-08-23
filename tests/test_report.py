@@ -1,9 +1,15 @@
 from pathlib import Path
+import tomllib
 
 import pytest
 
 from writing_eval.report import build_report, render_markdown
 from writing_eval.schema import Finding
+
+
+def _canonical_project_version() -> str:
+    with (Path(__file__).resolve().parents[1] / "pyproject.toml").open("rb") as handle:
+        return tomllib.load(handle)["project"]["version"]
 
 
 def sample_report() -> dict:
@@ -66,6 +72,10 @@ def test_provenance_contains_counts_hashes_paths_and_version(tmp_path: Path) -> 
         1,
         "deadbeef",
     )
+    assert provenance["tool"] == {
+        "name": "writing-eval",
+        "version": _canonical_project_version(),
+    }
     assert provenance["reference_corpus"]["record_count"] == 1
     assert provenance["reference_corpus"]["word_count"] == 2
     assert provenance["reference_corpus"]["path"] == str(references)
@@ -74,6 +84,37 @@ def test_provenance_contains_counts_hashes_paths_and_version(tmp_path: Path) -> 
     assert provenance["rule_set"]["version"] == 1
     assert len(provenance["rule_set"]["sha256"]) == 64
     assert provenance["rule_set"]["fingerprint"] == "deadbeef"
+
+
+def test_provenance_uses_project_version_when_metadata_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from importlib.metadata import PackageNotFoundError
+
+    from writing_eval import report_data
+    from writing_eval.report import build_provenance
+
+    def missing_distribution(_name: str) -> str:
+        raise PackageNotFoundError(_name)
+
+    monkeypatch.setattr(report_data, "version", missing_distribution)
+    references = tmp_path / "references.jsonl"
+    rules = tmp_path / "rules.yaml"
+    references.write_text('{"id":"r1","text":"One two."}\n', encoding="utf-8")
+    rules.write_text("version: 1\nrules: []\n", encoding="utf-8")
+    provenance = build_provenance(
+        references,
+        [{"id": "r1", "text": "One two."}],
+        rules,
+        0,
+        1,
+        "deadbeef",
+    )
+    assert provenance["tool"] == {
+        "name": "writing-eval",
+        "version": _canonical_project_version(),
+    }
+    assert provenance["tool"]["version"] != "unknown"
 
 
 def test_findings_by_rule_counts_and_markdown_section() -> None:

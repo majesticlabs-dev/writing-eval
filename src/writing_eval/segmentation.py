@@ -16,7 +16,7 @@ import re
 _WORD_RE = re.compile(r"\w+(?:['\u2019]\w+)*", flags=re.UNICODE)
 _HEADING_RE = re.compile(r"\s*#{1,6} ")
 LIST_MARKER_RE = re.compile(r"\s*(?:\d{1,3}[.)]|[-*+])\s+")
-_OPENER_RE = re.compile(r"[^\W\d_][\w'-]*", flags=re.UNICODE)
+_OPENER_RE = re.compile(r"[^\W\d_][\w\u2019'-]*", flags=re.UNICODE)
 _TERMINATORS = frozenset(".!?")
 
 
@@ -123,9 +123,9 @@ def segment(text: str) -> list[list[tuple[int, int]]]:
 def sentence_opener(text: str, start: int, end: int) -> tuple[int, int] | None:
     """Return the ``(start, end)`` span of a sentence's first letter-led word.
 
-    The opener is the first match of ``[^\\W\\d_][\\w'-]*`` inside ``text`` on the
-    half-open range ``[start, end)``. Sentences with no letter-led word return
-    ``None``.
+    The opener can contain an ASCII apostrophe, a ``\\u2019`` curly apostrophe,
+    or a hyphen, so contractions such as ``We’ll`` stay one token. Sentences
+    with no letter-led word return ``None``.
     """
 
     match = _OPENER_RE.search(text, start, end)

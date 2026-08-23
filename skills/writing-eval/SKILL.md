@@ -97,7 +97,8 @@ tell coverage, add it on top of the default rules:
 
 The overlay keeps the builtin rules and appends four more (`narrative_cliches`
 for stock phrases, `significance_markers` for meta commentary that labels a
-moment, `generation_artifacts` for placeholders and chatgpt.com tracking links,
+moment, `generation_artifacts` for bracketed scaffolding tokens (`insert`,
+`todo`, `tbd`, `placeholder`, `xxx`) plus chatgpt.com tracking links,
 `connector_openers` for sentence-initial furthermore, moreover, additionally)
 while widening six builtin rules. Output format and exit codes are unchanged,
 and it combines with `--style` and `--format json`. Use it for single-draft
@@ -111,6 +112,9 @@ List available profiles before choosing one when the user did not name it:
 ```bash
 ./writing-eval profile list
 ```
+
+The list includes only profiles that load successfully. Skipped directories
+are reported on stderr.
 
 If exactly one relevant profile exists, use it. If several profiles represent
 materially different authors, brands, or registers, ask the user which one to
@@ -145,11 +149,12 @@ accuracy, originality, argument strength, or reader preference.
 Build a profile from local `.md` and `.txt` files:
 
 ```bash
-./writing-eval profile build PROFILE_NAME --from path/to/prose
+./writing-eval profile build PROFILE_NAME --from path/to/prose [--rules PATH]
 ```
 
 Directories are scanned recursively. Selected files can also be listed after
-`--from`.
+`--from`. `--rules` selects the rule file used to precompute the profile
+cache (default: the builtin rule set).
 
 Before building:
 
@@ -170,6 +175,19 @@ file.
 
 After building, report the profile name, source count, word count, and output
 path exactly as the command reports them.
+
+## Refresh a profile cache
+
+After a rule change, refresh the precomputed reference cache without
+rebuilding the profile:
+
+```bash
+./writing-eval profile cache PROFILE_NAME
+./writing-eval profile cache PROFILE_NAME --rules rules/anti-ai.yaml
+```
+
+`--rules` must match the rule file that later `check` runs will use. Use
+`--profiles-root PATH` when the profile is not under `data/profiles`.
 
 ## Corpus evaluation
 

@@ -9,6 +9,7 @@ import sys
 
 from .cli_support import Parser, UserError
 from .profile_cache import refresh_reference_caches
+from .profile_io import validate_profile_name
 from .profiles import ProfileError, build_profile, list_profiles
 from .style_audit import BUILTIN_RULES_PATH, load_rules
 
@@ -57,6 +58,7 @@ def _load_rules(rules_path: Path):
 def run(args: argparse.Namespace) -> int:
     try:
         if args.subcommand == "build":
+            validate_profile_name(args.name)
             out_dir = args.profiles_root / args.name
             rules = _load_rules(args.rules)
             data = build_profile(
@@ -69,6 +71,7 @@ def run(args: argparse.Namespace) -> int:
             )
             return 0
         if args.subcommand == "cache":
+            validate_profile_name(args.name)
             directory = args.profiles_root / args.name
             rules = _load_rules(args.rules)
             refresh_reference_caches(directory, directory / "references.jsonl", rules)

@@ -36,10 +36,9 @@ def _repeated_opening_patterns(text: str) -> list[dict[str, Any]]:
         sentences: list[tuple[str, int, int, int]] = []
         for span_start, span_end in group:
             opener = sentence_opener(text, span_start, span_end)
-            if opener is not None:
-                sentences.append(
-                    (text[opener[0] : opener[1]], opener[0], span_start, span_end)
-                )
+            sentences.append(
+                (text[opener[0] : opener[1]], opener[0], span_start, span_end)
+            )
         run_start = 0
         while run_start < len(sentences):
             run_end = run_start + 1

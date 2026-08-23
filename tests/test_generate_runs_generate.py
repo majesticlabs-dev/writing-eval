@@ -22,9 +22,9 @@ def test_generate_happy_path_orders_records_and_records_meta_status(
     write_jsonl(
         prompts_path,
         [
-            {"id": "p-003", "use_case": "a", "prompt": "First prompt café."},
-            {"id": "p-001", "use_case": "a", "prompt": "Second prompt."},
-            {"id": "p-002", "use_case": "a", "prompt": "Third prompt."},
+            {"id": "p-003", "use_case": "article_section", "prompt": "First prompt café."},
+            {"id": "p-001", "use_case": "article_section", "prompt": "Second prompt."},
+            {"id": "p-002", "use_case": "article_section", "prompt": "Third prompt."},
         ],
     )
     out_path = tmp_path / "out.jsonl"
@@ -54,6 +54,7 @@ def test_generate_happy_path_orders_records_and_records_meta_status(
     assert meta["source"] is None
     assert meta["config"]["model"] == "gpt-5.6-terra"
     assert meta["config"]["reasoning_effort"] == "medium"
+    assert meta["config"]["system_prompt"] == "You are a concise assistant."
     assert meta["status"] == {"p-003": "ok", "p-001": "ok", "p-002": "ok"}
     assert meta["started"] <= meta["finished"]
 
@@ -62,7 +63,7 @@ def test_generate_reads_text_from_lastmsg_file_not_stdout(tmp_path: Path) -> Non
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path)
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "Hello."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "Hello."}])
     out_path = tmp_path / "out.jsonl"
 
     result = run_generate_runs(
@@ -89,7 +90,7 @@ def test_codex_argv_shape_matches_confirmed_invocation(tmp_path: Path) -> None:
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path, model="gpt-5.6-terra", reasoning_effort="medium")
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "Hello."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "Hello."}])
     out_path = tmp_path / "out.jsonl"
     argv_dump = tmp_path / "argv.json"
 
@@ -130,8 +131,8 @@ def test_retry_then_skip_sets_exit_code_1_and_skips_only_failed_id(
     write_jsonl(
         prompts_path,
         [
-            {"id": "p-ok", "use_case": "a", "prompt": "Fine prompt."},
-            {"id": "p-bad", "use_case": "a", "prompt": "Fine prompt."},
+            {"id": "p-ok", "use_case": "article_section", "prompt": "Fine prompt."},
+            {"id": "p-bad", "use_case": "article_section", "prompt": "Fine prompt."},
         ],
     )
     out_path = tmp_path / "out.jsonl"
@@ -166,7 +167,7 @@ def test_retry_recovers_after_one_failed_attempt(tmp_path: Path) -> None:
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path)
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "Hi."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "Hi."}])
     out_path = tmp_path / "out.jsonl"
 
     result = run_generate_runs(
@@ -188,7 +189,7 @@ def test_empty_lastmsg_file_treated_as_failure_then_recovers(tmp_path: Path) -> 
     fake_codex = make_fake_codex(tmp_path)
     config_path = write_config(tmp_path)
     prompts_path = tmp_path / "prompts.jsonl"
-    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "a", "prompt": "Hi."}])
+    write_jsonl(prompts_path, [{"id": "p-1", "use_case": "article_section", "prompt": "Hi."}])
     out_path = tmp_path / "out.jsonl"
 
     result = run_generate_runs(
@@ -217,8 +218,8 @@ def test_resume_skips_existing_ids_and_only_calls_codex_for_new_ones(
     write_jsonl(
         prompts_path,
         [
-            {"id": "p-1", "use_case": "a", "prompt": "First."},
-            {"id": "p-2", "use_case": "a", "prompt": "Second."},
+            {"id": "p-1", "use_case": "article_section", "prompt": "First."},
+            {"id": "p-2", "use_case": "article_section", "prompt": "Second."},
         ],
     )
     out_path = tmp_path / "out.jsonl"
@@ -241,9 +242,9 @@ def test_resume_skips_existing_ids_and_only_calls_codex_for_new_ones(
     write_jsonl(
         prompts_path,
         [
-            {"id": "p-1", "use_case": "a", "prompt": "First."},
-            {"id": "p-2", "use_case": "a", "prompt": "Second."},
-            {"id": "p-3", "use_case": "a", "prompt": "Third."},
+            {"id": "p-1", "use_case": "article_section", "prompt": "First."},
+            {"id": "p-2", "use_case": "article_section", "prompt": "Second."},
+            {"id": "p-3", "use_case": "article_section", "prompt": "Third."},
         ],
     )
 
@@ -266,3 +267,4 @@ def test_resume_skips_existing_ids_and_only_calls_codex_for_new_ones(
     assert [record["id"] for record in records] == ["p-1", "p-2", "p-3"]
     assert records[0]["text"] == "GEN[1]:First."  # unchanged from first run
     assert records[2]["text"] == "GEN[3]:Third."
+

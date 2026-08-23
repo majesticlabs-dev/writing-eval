@@ -11,7 +11,7 @@ import sys
 import pytest
 
 from writing_eval import cli_check, cli_eval
-from writing_eval.style_audit import BUILTIN_RULES_PATH
+from writing_eval.style_audit import BUILTIN_RULES_PATH, load_rules
 
 from tests.helpers_cli import ROOT, SCRIPT, load_run_eval_module, write_jsonl
 
@@ -180,3 +180,51 @@ def test_run_eval_script_still_wraps_the_eval_command(tmp_path: Path) -> None:
     report = (tmp_path / "report.md").read_text(encoding="utf-8")
     assert f"- Path: {BUILTIN_RULES_PATH}" in report
     assert "- Fingerprint: " in report
+
+
+def test_blank_exception_string_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "rules.yaml"
+    path.write_text(
+        "rules:\n"
+        "  - id: probe\n"
+        "    severity: warn\n"
+        "    detector: '(?i)\\bprobe\\b'\n"
+        "    message: Probe.\n"
+        "    exceptions: ['']\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="empty strings"):
+        load_rules(path)
+
+
+def test_whitespace_exception_string_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "rules.yaml"
+    path.write_text(
+        "rules:\n"
+        "  - id: probe\n"
+        "    severity: warn\n"
+        "    detector: '(?i)\\bprobe\\b'\n"
+        "    message: Probe.\n"
+        "    exceptions: ['   ']\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="empty strings"):
+        load_rules(path)
+
+
+def test_unknown_base_rule_field_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "rules.yaml"
+    path.write_text(
+        "rules:\n"
+        "  - id: probe\n"
+        "    severity: warn\n"
+        "    detector: '(?i)\\bprobe\\b'\n"
+        "    message: Probe.\n"
+        "    enabled: false\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="unsupported field") as error:
+        load_rules(path)
+    message = str(error.value)
+    assert "enabled" in message
+    assert "allowed fields are: id, severity, detector, message, exceptions" in message
