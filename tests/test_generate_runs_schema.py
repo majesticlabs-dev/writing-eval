@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from writing_eval.generation_io import load_jsonl_records
 
 from tests.helpers_generate_runs import (
     make_fake_codex,
@@ -10,6 +11,17 @@ from tests.helpers_generate_runs import (
     write_config,
     write_jsonl,
 )
+
+
+def test_generic_prompt_field_does_not_require_generation_use_case(
+    tmp_path: Path,
+) -> None:
+    records_path = tmp_path / "records.jsonl"
+    write_jsonl(records_path, [{"id": "p-1", "prompt": "Generic prompt."}])
+
+    records = load_jsonl_records(records_path, "prompt", "records")
+
+    assert records == [{"id": "p-1", "prompt": "Generic prompt."}]
 
 
 def test_generate_rejects_invalid_use_case_with_line_error(tmp_path: Path) -> None:

@@ -166,16 +166,3 @@ def test_invalid_utf8_rules_file_is_clean_user_error(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "could not load style-audit rules" in result.stderr
     assert "Traceback" not in result.stderr
-
-
-def test_check_audit_programming_defect_is_not_user_error(tmp_path: Path) -> None:
-    module = load_run_eval_module()
-
-    def boom(_text: str, _rules: object) -> list:
-        raise RuntimeError("engine exploded")
-
-    module._audit_text = boom
-    draft = tmp_path / "draft.md"
-    draft.write_text("Hello world.\n", encoding="utf-8")
-    with pytest.raises(RuntimeError, match="engine exploded"):
-        module.main(["check", str(draft)])

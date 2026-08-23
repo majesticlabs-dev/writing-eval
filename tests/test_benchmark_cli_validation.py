@@ -80,11 +80,11 @@ def test_compare_systems_rejects_nonfinite_values_with_exit_2(tmp_path: Path) ->
 def test_decision_gate_rejects_invalid_utf8_eval_set_with_exit_2(tmp_path: Path) -> None:
     """Decision gate with invalid UTF-8 eval set should exit with code 2 and no traceback."""
     arguments = _gate_arguments(tmp_path)
-    
+
     # Create invalid UTF-8 eval_set.jsonl
     (tmp_path / "eval_set.jsonl").write_bytes(b'{"id": "a1", "word_count": \xff\xfe}\n')
     result = run_script(DECISION_GATE, *arguments)
-    
+
     assert result.returncode == 2
     assert "could not decode" in result.stderr
     assert "UTF-8" in result.stderr

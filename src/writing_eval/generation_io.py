@@ -22,7 +22,11 @@ class UsageError(Exception):
 
 
 def load_jsonl_records(
-    path: Path, field_name: str, description: str
+    path: Path,
+    field_name: str,
+    description: str,
+    *,
+    validate_prompt_use_case: bool = False,
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
@@ -53,7 +57,7 @@ def load_jsonl_records(
                         f"invalid record in {path} at line {line_number}: "
                         f"expected a nonempty string {field_name!r}"
                     )
-                if field_name == "prompt":
+                if validate_prompt_use_case:
                     use_case = record.get("use_case")
                     if not isinstance(use_case, str) or not use_case.strip():
                         raise UsageError(
@@ -82,7 +86,9 @@ def load_jsonl_records(
 
 
 def load_prompts(path: Path) -> list[dict[str, Any]]:
-    return load_jsonl_records(path, "prompt", "prompts")
+    return load_jsonl_records(
+        path, "prompt", "prompts", validate_prompt_use_case=True
+    )
 
 
 def load_id_text_map(path: Path, field_name: str, description: str) -> dict[str, str]:
