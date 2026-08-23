@@ -2,7 +2,7 @@
 
 All notable changes to `writing-eval` are documented here.
 
-## [Unreleased]
+## [0.2.0] - 2026-08-22
 
 ### Added
 
