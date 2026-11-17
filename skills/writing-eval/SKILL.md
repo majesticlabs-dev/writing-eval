@@ -105,6 +105,14 @@ and it combines with `--style` and `--format json`. Use it for single-draft
 checks only: keep the builtin rules for corpus evaluation, because rule
 fingerprints identify comparable runs.
 
+`check` JSON also includes `item_sets`, observations about Markdown lists of
+at least three items. Repeated-opening analysis skips pairs entering list
+items, but still checks sentences within an item. `list_shared_lead` and
+`list_inconsistent_form` are informational review candidates: consider moving
+shared words into a lead-in and making label or punctuation forms consistent.
+Preserve deliberate parallelism. These signals do not infer grammar, sentiment,
+or synonymous concepts.
+
 ## Profile check
 
 List available profiles before choosing one when the user did not name it:

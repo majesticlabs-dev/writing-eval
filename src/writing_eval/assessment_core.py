@@ -24,6 +24,7 @@ CLARITY_RULES = frozenset(
         "negative_listing",
     }
 )
+STRUCTURE_RULES = frozenset({"list_shared_lead", "list_inconsistent_form"})
 SEVERITY_DEDUCTION = {"warn": 2, "info": 0}
 SEVERITY_PRIORITY = {"warn": "medium", "info": "low"}
 PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}

@@ -37,7 +37,7 @@ def build_assessment(
 ) -> dict[str, Any]:
     """Return a deterministic, profile-relative editorial assessment."""
 
-    gaps = gap_map(style_gap)
+    gaps = gap_map(style_gap, text)
     statistics = build_statistics(metrics, quality_metrics, gaps, profile_statistics)
     profile_relative_rules = rule_baseline is not None
     assessment: dict[str, Any] = {

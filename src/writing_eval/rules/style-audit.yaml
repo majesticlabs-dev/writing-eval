@@ -39,6 +39,18 @@ rules:
     message: Vary consecutive sentence openings unless the repetition is deliberate.
     exceptions: []
 
+  - id: list_shared_lead
+    severity: info
+    detector: list_shared_lead
+    message: Every item in this list opens with the same words. State the shared words once in a lead-in, or start each item with the words that differ. Keep the items parallel.
+    exceptions: []
+
+  - id: list_inconsistent_form
+    severity: info
+    detector: list_inconsistent_form
+    message: This item differs from the other items in its list in label or end punctuation. Use one form for every item unless the difference is meant to signal something.
+    exceptions: []
+
   - id: vague_authority
     severity: warn
     detector: '(?i)\b(?:research shows|studies show|experts say|many people believe|experts agree|widely regarded)\b'

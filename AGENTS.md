@@ -37,6 +37,7 @@ Use current code and focused tests to resolve internal details. Historical bench
 - `cli_check.py`, `cli_check_render.py`, `cli_profile.py`, and `cli_eval.py` implement command families. Keep `cli.py` as the thin dispatcher and shared CLI boundary.
 - `style_audit*.py` contains rule models, loading, detection, and audit execution. `style_audit_paths.py` holds `BUILTIN_RULES_PATH`, the one default rule-set path every entry point uses. `style_audit_overlay.py` resolves `extends` overlay chains into one merged raw rule list before validation.
 - `metrics*.py` and `segmentation.py` contain deterministic text measurements.
+- `item_sets.py` extracts Markdown list sets and summarizes list and record openings.
 - `assessment*.py` builds and renders single-document assessments.
 - `profile*.py` and `profiles.py` manage local style profiles.
 - `report*.py` builds deterministic corpus report data and Markdown.

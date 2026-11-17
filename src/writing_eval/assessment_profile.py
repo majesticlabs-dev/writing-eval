@@ -14,7 +14,8 @@ from .assessment_core import (
     round_half_up,
     scaled_deduction,
 )
-from .segmentation import segment, sentence_opener
+from .metrics_structure import repeated_opening_pair_counts
+from .segmentation import segment, sentence_opener, starts_list_item
 
 
 def _line_and_column(text: str, char_offset: int) -> tuple[int, int]:
@@ -45,6 +46,7 @@ def _repeated_opening_patterns(text: str) -> list[dict[str, Any]]:
             opener = sentences[run_start][0]
             while (
                 run_end < len(sentences)
+                and not starts_list_item(text, sentences[run_end][2])
                 and sentences[run_end][0].casefold() == opener.casefold()
             ):
                 run_end += 1
@@ -65,14 +67,19 @@ def _repeated_opening_patterns(text: str) -> list[dict[str, Any]]:
     return patterns
 
 
-def gap_map(style_gap: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def gap_map(style_gap: dict[str, Any], text: str) -> dict[str, dict[str, Any]]:
     from .assessment_core import PROFILE_METRIC_DETAILS
 
-    return {
+    gaps = {
         str(metric["metric"]): metric
         for metric in style_gap.get("metrics", [])
         if metric.get("metric") in PROFILE_METRIC_DETAILS
     }
+    if "repeated_opening_rate" in gaps and repeated_opening_pair_counts(text)[1] == 0:
+        gaps["repeated_opening_rate"] = {
+            **gaps["repeated_opening_rate"], "draft": None, "delta": None,
+        }
+    return gaps
 
 
 def profile_issues(
@@ -176,7 +183,7 @@ def profile_issues(
     repeated_findings = [
         finding for finding in findings if finding["rule_id"] == "repeated_openings"
     ]
-    if repeated is not None:
+    if repeated is not None and repeated.get("draft") is not None:
         repeated_raw = scaled_deduction(
             absolute_gap(repeated.get("draft"), repeated.get("profile")), 0.03, 0.20, 10.0
         )

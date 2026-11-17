@@ -25,9 +25,9 @@ def test_builtin_rules_path_lives_inside_the_installed_package() -> None:
 
 def test_rule_count_and_severity_census(auditor: StyleAuditor) -> None:
     severities = [rule.severity for rule in auditor.rules]
-    assert len(auditor.rules) == 34
+    assert len(auditor.rules) == 36
     assert severities.count("warn") == 16
-    assert severities.count("info") == 18
+    assert severities.count("info") == 20
 
 
 def test_rule_ids_are_unique_and_ordered_by_file_position(auditor: StyleAuditor) -> None:

@@ -75,7 +75,7 @@ def test_json_format_schema(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert set(payload) == {"file", "findings", "metrics", "quality_metrics"}
+    assert set(payload) == {"file", "findings", "metrics", "quality_metrics", "item_sets"}
     assert payload["file"] == str(draft)
     assert isinstance(payload["findings"], list)
     finding = payload["findings"][0]

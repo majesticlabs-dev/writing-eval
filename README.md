@@ -167,6 +167,7 @@ quality_metrics (informational):
     paragraph_count: 1.000000
     mean_paragraph_sentence_count: 2.000000
     single_sentence_paragraph_rate: 0.000000
+item_sets: none
 ```
 
 The example values are illustrative. Scores below 10 tokens render `mtld` as
@@ -206,16 +207,17 @@ two files into
 - `references.jsonl`: one `{"id", "text", "file"}` record per source document,
   reused as the reference corpus by `check --style`.
 - `profile.json`: the profile name, its creation date, a numeric
-  `metrics_version` field (currently 2), a `references_sha256` digest of the
+  `metrics_version` field (currently 3), a `references_sha256` digest of the
   paired `references.jsonl` file, per-source word counts, the total word
   count, and the corpus statistics (mean sentence length and variance,
   repeated-opening rate, Flesch reading ease and grade, MTLD, paragraph
   statistics, and the top 20 content tokens after a small stop list).
 
 `metrics_version` pins the metric semantics the stored statistics were computed
-with. Version 2 covers curly-apostrophe (U+2019) sentence openers,
-markdown-aware readability word counts, and MTLD tail, threshold, and
-sequence-input lowercase behavior. Older profiles are rejected with a rebuild
+with. Version 3 excludes adjacent pairs entering Markdown list items from
+repeated-opening detection and rates. It retains version 2's curly-apostrophe
+openers, markdown-aware readability counts, and MTLD semantics.
+Older profiles are rejected with a rebuild
 instruction until `profile build` runs again with the current tool.
 `references_sha256` binds `profile.json` to the installed `references.jsonl`.
 A missing, invalid, or mismatched digest is the same rebuild error, so a mixed
@@ -265,7 +267,7 @@ That number is measured, not assumed. Holding a draft fixed and varying only
 which articles form the profile, the standard deviation of the resulting score
 falls with more articles. Two points is the rubric's smallest unit, the
 deduction for one excess `warn` occurrence, so below that threshold the
-sampling noise is smaller than anything the score can express. The mean
+sampling noise is smaller than anything the score can express. The median
 standard deviation crosses 2 points around N = 20, but individual drafts vary
 widely, so the number that matters is coverage: the share of drafts that have
 actually settled below 2 points at a given profile size.
@@ -276,14 +278,15 @@ actually settled below 2 points at a given profile size.
 | 15 | 37.5% |
 | 20 | 54.2% |
 | 25 | 70.8% |
-| 30 | 66.7% |
-| 40 | 87.5% |
-| 50 | 95.8% |
+| 30 | 62.5% |
+| 40 | 83.3% |
+| 50 | 91.7% |
 | 60 | 95.8% |
+| 70 | 100.0% |
 
 25 articles covers 7 in 10 drafts. 30 articles is not reliably better than 25;
-the difference sits inside trial noise. 40 articles covers 9 in 10, and 50
-covers 24 in 25, which is why 40 is the preferred target. As a rule that holds
+the difference sits inside trial noise. 40 articles covers about 8 in 10,
+and 50 covers about 9 in 10, so 40 remains a practical preferred target. As a rule that holds
 at every corpus size tested: treat a score difference under 3 points as noise,
 whether between two drafts or between two runs of the same draft.
 
@@ -294,10 +297,11 @@ deviation of 1.3 while 11 articles gave 2.5. Prior versions of this document
 recommended a 15,000-word minimum; that figure was not supported by measurement
 and has been removed. At a fixed article count, per-article length still
 matters up to a point: a corpus averaging about 1,200 words per article was
-roughly 0.4 points noisier than one averaging about 2,350, with no further gain
+roughly 0.5 points noisier than one averaging about 2,350, with no further gain
 past about 2,350 words per article. The floor below 517 words per article, the
 shortest article in the study corpus, is unmeasured.
 
+These measurements were recomputed for 0.3.0's list-aware metric semantics.
 Method, full results, and the reproduction script are in
 [docs/profile-size-study.md](docs/profile-size-study.md). The study used one
 101-article corpus of long-form nonfiction by a single author. The direction of
@@ -422,7 +426,15 @@ The example is abbreviated. Each issue includes stable identifiers in JSON,
 numeric current and target values, an editing direction, an instruction,
 success criteria, and any known line and column locations. Consecutive
 repeated-opening findings are grouped into one run, so deliberate anaphora can
-be reviewed as a pattern instead of as several disconnected warnings.
+be reviewed as a pattern instead of as several disconnected warnings. Pairs
+entering Markdown list items are excluded; sentences within an item still count.
+List findings are separate review candidates under Rhythm and structure and
+never deduct points directly. Scores can still change because list pairs no
+longer dilute the repeated-opening rate of prose in a mixed document. With no
+eligible pairs the raw metric remains 0.0 for report compatibility, but the
+assessment statistic is `null` (`unavailable`). It produces no repeated-opening
+comparison, editing direction, or deduction. A measured zero with at least one
+eligible pair is still compared with the profile normally.
 
 Raw rule findings remain in JSON. For a profile check, each rule is also run
 over the profile references. The profile occurrence rate is scaled to the draft
@@ -451,7 +463,7 @@ file:
 ./writing-eval check draft.md --style acme --json evaluation.json
 ```
 
-Profile checks preserve the raw `file`, `findings`, `metrics`,
+Profile checks preserve the raw `file`, `findings`, `metrics`, `item_sets`,
 `quality_metrics`, and `style_gap` fields and add an `assessment` object. This
 abbreviated example shows the shape:
 
@@ -628,7 +640,7 @@ or quoted at length in tracked files.
 - **Shared tokenization**: lowercase word tokens keep ASCII and curly-apostrophe contractions together.
 - **Mean sentence length**: average number of words per sentence.
 - **Sentence length variance**: population variance of sentence word counts. It describes how much sentence lengths vary within the corpus.
-- **Repeated opening rate**: share of adjacent sentence pairs that begin with the same normalized opening. The denominator is the number of adjacent sentence pairs, or zero when fewer than two sentences exist. Openers keep curly apostrophes (U+2019), so a contraction such as We'll is one opener unit, matching tokenization.
+- **Repeated opening rate**: share of eligible adjacent sentence pairs that begin with the same normalized opening. Pairs entering a Markdown list item are excluded from both numerator and denominator, even in lists with fewer than three items. Sentences within an item and continuation lines still count. The rate is 0.0 with no eligible pairs. Openers keep curly apostrophes (U+2019), so a contraction such as We'll is one opener unit, matching tokenization.
 
 ### Quality metrics (informational)
 
@@ -660,7 +672,22 @@ described above; MTLD and paragraph statistics remain informational.
 Reports retain the aggregate `tell_rate` metric and also emit normalized
 `tell_rates_by_severity` values. Repeated-opening corpus rates count only
 adjacent pairs within each document, so reordering JSONL records does not alter
-the result.
+the result. Reports also include `record_openings`, an order-independent,
+report-only view of shared first-two-token leads across records. Its fields are
+`record_count`, `distinct_lead_count`, `shared_lead_record_rate`, and
+`top_shared_leads` (up to five `{lead, record_count}` entries sorted by decreasing
+count, then lead). The rate is the fraction of all records sharing a tokenized
+lead with another record; tokenless records contribute no lead. It is `null`
+when no record has tokens, rendered `n/a`. One-word records use their single token.
+These counts are intended for feeds of short outputs, not quality judgments
+about long documents, and never enter comparison metrics or the decision gate.
+
+Reports from before 0.3.0 are not directly comparable: list-aware rates and the
+two new informational rules can change aggregate tell rates. Old noise floors
+must be remeasured before future official generation, in the registration order
+required by `benchmark/THRESHOLDS.md`. Sealed benchmark records remain unchanged.
+New findings also enter generation revision prompts and may trigger a revision
+call; the loop still stops on zero warn findings.
 
 These metrics describe observable text patterns. They do not establish factual
 accuracy, originality, reader preference, or overall writing quality on their
@@ -777,8 +804,8 @@ Rules are validated when loaded, after any overlay merge. Missing fields, unknow
 
 #### The builtin rule set
 
-One rule set ships with the project, at a single in-package path. It holds 34
-rules: 16 `warn` and 18 `info`. The builtin rules are recommendations, and no
+One rule set ships with the project, at a single in-package path. It holds 36
+rules: 16 `warn` and 20 `info`. The builtin rules are recommendations, and no
 rule blocks the build. Both `check` and corpus `eval` use it
 by default. The `version:` key in the YAML header is a schema version, not a
 content version; the reported SHA-256 and rule fingerprint carry content
@@ -786,6 +813,71 @@ identity. The regular passive-voice pattern is deliberately precision-first:
 it matches a `be` plus regular `-ed` participle only when the participle ends
 the sentence or is followed by a likely agent, preposition, or frequency
 determiner, so unlisted adjectival participles can pass through undetected.
+
+#### Scannable item sets
+
+Following the context-sensitive principles in
+[Five Principles for Generating Readable AI Text in Bulk](https://fsdatalab.github.io/blog/agent-text-at-scale/),
+list diagnostics preserve useful parallelism rather than demanding decorative
+variation. Two builtin `info` rules examine sets of at least three sibling
+Markdown list items:
+
+- `list_shared_lead`: every item shares its first two lead units. Units are
+  whitespace-separated words with surrounding Markdown emphasis, quotes, and
+  punctuation stripped; internal hyphens and apostrophes stay together. The
+  finding shows the longest common prefix and suggests stating it once in a
+  lead-in or front-loading distinguishing words while retaining parallel
+  structure. Items starting with a URL or inline code do not trigger this rule.
+- `list_inconsistent_form`: an item differs in label or end punctuation from a
+  form used by at least two thirds of its siblings. It asks for one form, not
+  for more labels or more punctuation specifically.
+
+The fixed heuristic parameters are a three-item minimum, a two-unit lead
+window, and a maximum four-token colon label using the shared metric tokenizer.
+They are review heuristics, not claims about reading speed or a universal
+two-word scanning limit. Label candidates are an initial bold span or a short
+colon label followed by nonempty text; a parent item ending in a colon is not
+a colon label. Bold and colon candidates jointly establish a labeled majority
+when at least two thirds of the items have either kind. Without that majority,
+colon-only candidates are treated as unlabeled, so a sentence such as
+`For example: ...` does not become a label outlier. Bold labels still count,
+and punctuation differences are still checked. The final combined label and
+punctuation form must be shared by at least two thirds of the items before
+outliers are reported. Terminal punctuation is `.`, `!`, or `?`, ignoring
+closing emphasis, quote, backtick, and parenthesis wrappers. Loose lists,
+nested lists, and task-list checkboxes (`[ ]`, `[x]`, `[X]`) are supported. Checkbox markers do not count as
+lead units. Marker-kind changes, headings, top-level fenced code, and new
+unindented paragraphs separate sets. A fence closes only list levels at its
+indentation or deeper; any remaining outer item keeps the fenced block as
+continuation context without turning code lines into siblings. Lead units come
+from each item's first line. End punctuation comes from the last prose line
+outside fenced code. A fenced block does not change termination, but subsequent
+prose does. Exception matching still sees the whole item, including its fenced
+blocks. These list-specific observations do not change the tokenizer used by
+existing metrics or corpus `record_openings`.
+
+For example, `Add retry logic / Add a timeout / Add tests` preserves its
+consistent opening without findings. `Users complain about crashes / Users
+complain about billing / Users complain about login` produces one shared-lead
+review candidate rather than two prose-repetition findings. The tool cannot
+know whether either pattern is intentional. Both rules cost no points directly
+and can be disabled with `extends: builtin` and `enabled: false`.
+
+`check` JSON always includes `item_sets`, independent of which rules are enabled:
+
+```json
+{"line": 1, "marker": "bullet", "item_count": 3, "distinct_lead_count": 1,
+ "shared_lead": "Users complain about", "form_outlier_lines": []}
+```
+
+The array is ordered by first-item line; `shared_lead` is `null` when absent.
+The summary joins shared units with spaces, without emphasis markup. Finding
+spans remain exact source slices so their offsets stay valid, and can contain
+intervening markup. Without `--style`, plain text prints these observations
+after quality metrics (or `item_sets: none`) and quotes shared leads with
+JSON-style double quotes and escaping. With `--style`, the assessment displays excess list
+findings as review candidates using the normal profile allowance. The raw list
+observations remain available in JSON.
 
 #### Customizing rules
 
@@ -874,9 +966,17 @@ single drafts.
   quality.
 - Corpus metrics are sensitive to sample size, genre, and reference selection.
 - Simple token and sentence boundaries can differ from linguistic parsers.
-- Adjacent list items in the same segmentation group count as consecutive
-  sentences for repeated-opening analysis. Deliberate parallel openings can
-  still produce informational findings; they do not automatically need revision.
+- List-set detection covers Markdown list lines, not tables, HTML, or
+  block-quoted lists (`> - ...`). Indented code that looks like list lines is
+  also treated as a list; this is not a complete Markdown parser. List-set
+  detection ignores fenced code, but sentence segmentation does not recognize
+  fences: pairs entering marker-looking lines inside them are still excluded
+  from repeated-opening rates.
+  It does not infer grammatical form, verb sentiment, or synonymous concepts.
+  A split without a two-thirds majority form produces no form-outlier finding.
+- Shared-lead findings measure lead-unit equality, not whether a prefix is generic
+  or meaningful. `Add the ...` is flagged too; retain deliberate repetition
+  when it helps the reader.
 - A rule match identifies a review candidate, not a universal writing error.
 - The harness does not evaluate factual accuracy, coverage, or human preference.
 - Literal preservation is a normalized multiset comparison, not semantic factuality.
@@ -885,7 +985,7 @@ single drafts.
 - Distributional scores (token 1-gram L2 and the top overrepresented terms) depend heavily on the composition and size of the chosen reference corpus or profile; small profiles make them noisy.
 - L2 distance is sensitive to output length, so systems whose word counts differ a lot are not directly comparable on it.
 - Benchmark generation uses a frozen decoding config and measured per-metric noise floors (`benchmark/THRESHOLDS.md`); deltas below the documented floor are inconclusive.
-- Existing profiles with metric semantics other than version 2 must be rebuilt before use.
+- Existing profiles with metric semantics other than version 3 must be rebuilt before use.
 - Readability scores ignore heading text and list markers, so heading-heavy Markdown can differ from a plain-text reading.
 - `profile list` omits directories that `load_profile` rejects.
 

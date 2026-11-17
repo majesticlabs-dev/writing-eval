@@ -12,6 +12,7 @@ from typing import Any
 from .assessment import build_assessment, build_rule_baseline
 from .cli_check_render import render_check_text
 from .cli_support import CommandContext, Parser, UserError
+from .item_sets import summarize_item_sets
 from .metrics import (
     mtld,
     paragraph_stats,
@@ -98,6 +99,7 @@ def _check_result(
     return {
         "file": display_name,
         "findings": positioned,
+        "item_sets": summarize_item_sets(text),
         "metrics": {
             "word_count": word_count,
             "tell_rates_by_severity": tell_rates_by_severity(findings, word_count),

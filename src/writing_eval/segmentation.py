@@ -26,6 +26,13 @@ def tokenize(text: str) -> list[str]:
     return _WORD_RE.findall((text or "").lower())
 
 
+def starts_list_item(text: str, span_start: int) -> bool:
+    """Whether a sentence starts immediately after a Markdown list marker."""
+
+    line_start = text.rfind("\n", 0, span_start) + 1
+    return LIST_MARKER_RE.fullmatch(text[line_start:span_start]) is not None
+
+
 def _is_decimal_dot(line: str, index: int) -> bool:
     return (
         line[index] == "."

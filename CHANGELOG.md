@@ -2,17 +2,54 @@
 
 All notable changes to `writing-eval` are documented here.
 
-## [Unreleased]
+## [0.3.0] - Unreleased
+
+### Added
+
+- List-aware diagnostics for shared opening words (`list_shared_lead`) and
+  label or end-punctuation outliers (`list_inconsistent_form`). Both are
+  informational review candidates, not deductions or grammatical judgments.
+- `check` JSON includes `item_sets`; plain text reports each detected set.
+- Corpus reports include order-independent `record_openings` counts outside
+  the scored metrics and decision gate.
+
+### Changed
+
+- Repeated-opening detection, profile locations, and rates skip sentence pairs
+  entering Markdown list items. Sentences within an item still count. Profile
+  metric semantics are version 3; rebuild older profiles before use.
+- Mixed-document rates can rise when list pairs leave the denominator. Profile
+  alignment scores can move in either direction. With zero eligible pairs,
+  the raw repeated-opening metric stays 0.0 but its assessment statistic is
+  unavailable and produces no comparison or deduction. Assessment schema and
+  rubric versions remain unchanged.
+- The builtin set now has 36 rules. Rule fingerprints and reference caches
+  change; refresh caches with `./writing-eval profile cache <name>` (plus
+  `--rules PATH` for custom rules). Checks recompute missing reference counts.
+- The new informational findings enter generation revision guidance and may
+  trigger a revision call; the existing loop still stops on zero warn findings.
+
+### Compatibility
+
+- Reports and noise floors from 0.2.0 and 0.3.0 are not directly comparable:
+  both repeated-opening semantics and aggregate tell rates can change. Future
+  experiments must remeasure noise floors before official generation in the
+  registration order required by `benchmark/THRESHOLDS.md`. Sealed records
+  and historical verdicts are unchanged.
+- `record_openings.shared_lead_record_rate` for empty or wholly tokenless
+  corpora is `null` (`n/a` in Markdown), not a passing zero.
 
 ### Fixed
 
-- Repeated-opening advice now allows deliberate repetition. Detection, severity,
-  and metric values are unchanged, but the message changes the builtin rule
-  fingerprint and the guidance supplied to generation revision prompts. Do not
-  treat reports with different rule fingerprints as fingerprint-comparable.
-  Refresh profile caches with `./writing-eval profile cache <name>` (adding
-  `--rules PATH` when using custom rules). Checks remain correct without a
-  refresh, but recompute reference statistics.
+- Repeated-opening advice allows deliberate repetition. List advice preserves
+  useful parallelism rather than asking writers to substitute synonyms.
+- Task checkboxes and hyphenated words no longer distort list lead units;
+  URL-led and code-led items do not receive shared-lead rewriting advice.
+  Existing metric tokenization is unchanged.
+- List summaries omit emphasis markup while finding spans retain source
+  offsets. Form-outlier spans omit trailing whitespace and carriage returns.
+  Indented fences remain inside their parent list; colon-only parent items
+  are not labels. Plain-text shared leads use consistent JSON quoting.
 
 ## [0.2.0] - 2026-08-22
 

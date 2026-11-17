@@ -11,6 +11,12 @@ The primary result is a 24-draft run (experiment 1). An earlier 6-draft run
 only the mean. The first pass is kept below, marked superseded, with the
 reason the mean misled.
 
+Reverified on 2026-11-17 with writing-eval 0.3.0, metric semantics version 3,
+and the 36-rule builtin set. List-item starts no longer enter repeated-opening
+pairs. The corpus, sampling, seed, and script defaults are unchanged. Tables
+and conclusions below use the recomputed results, not the earlier version 2
+measurements.
+
 ## The question
 
 A style profile aggregates statistics over a set of articles. If the profile is
@@ -58,31 +64,33 @@ invisible to the score.
 
 | N | Mean sd | Median sd | Worst sd | Drafts at or under 2 pts |
 |---:|---:|---:|---:|---:|
-| 10 | 2.82 | 2.61 | 6.46 | 33.3% |
-| 15 | 2.48 | 2.45 | 5.82 | 37.5% |
-| 20 | 2.37 | 1.85 | 6.59 | 54.2% |
-| 25 | 2.05 | 1.61 | 6.94 | 70.8% |
-| 30 | 1.97 | 1.47 | 5.96 | 66.7% |
-| 40 | 1.51 | 1.21 | 4.90 | 87.5% |
-| 50 | 1.19 | 1.07 | 3.55 | 95.8% |
-| 60 | 0.97 | 0.92 | 2.50 | 95.8% |
+| 10 | 2.79 | 2.56 | 6.54 | 33.3% |
+| 15 | 2.46 | 2.43 | 5.79 | 37.5% |
+| 20 | 2.36 | 1.79 | 6.52 | 54.2% |
+| 25 | 2.05 | 1.63 | 6.80 | 70.8% |
+| 30 | 1.97 | 1.51 | 5.74 | 62.5% |
+| 40 | 1.51 | 1.19 | 4.90 | 83.3% |
+| 50 | 1.17 | 0.99 | 3.55 | 91.7% |
+| 60 | 0.96 | 0.82 | 2.50 | 95.8% |
+| 70 | 0.65 | 0.63 | 1.81 | 100.0% |
 
 Per-draft crossing points (the N at which a draft's own sd first falls to or
 below 2 points): 17 of 24 drafts cross by N = 25, 18 of 24 by N = 30, and 23 of
-24 by N = 50. One draft, 4,588 words, is still at 2.50 with 60 articles in the
-profile.
+24 by N = 60. One draft, 4,588 words, is still at 2.50 with 60 articles in the
+profile. All 24 are at or under 2 points at N = 70.
 
 Findings:
 
 1. **The median draft crosses the 2-point resolution at N = 20, but the
    distribution has a long tail.** A recommendation has to be set against
    coverage (the share of drafts that have settled), not against the mean.
-   N = 25 covers 7 in 10 drafts. N = 40 covers 9 in 10. N = 50 covers 24 of 25.
-2. **"Prefer 30" is not supported by this run.** N = 30 covers 66.7% of drafts
+   N = 25 covers 7 in 10 drafts. N = 40 covers about 8 in 10. N = 50 covers
+   about 9 in 10.
+2. **"Prefer 30" is not supported by this run.** N = 30 covers 62.5% of drafts
    against N = 25's 70.8%, a difference inside trial noise. The real gains sit at
    N = 40 and N = 50.
 3. **Reporting only the mean sd, which is what the first pass below did, hides
-   this tail.** The first pass's mean at N = 25 read 1.79, comfortably under 2
+   this tail.** The recomputed first pass's mean at N = 25 reads 1.74, under 2
    points, and said nothing about the roughly 3 in 10 drafts still above it
    here. The first pass is kept below rather than deleted: it shows exactly
    what the mean view hides, which is itself worth recording.
@@ -100,21 +108,22 @@ This run used 6 held-out drafts, 40 subsamples per N, sizes 3 through 70, and
 reported only the mean sd. It produced the original "at least 25, prefer 30"
 recommendation. It is kept here because the 24-draft run above found the mean
 alone was misleading, not because this table is still the recommendation.
+The table is recomputed under version 3, with `--heldout 6 --trials 40`.
 
 | N articles | Mean words | Mean score | Score stdev | Mean range | p90 spread |
 |---:|---:|---:|---:|---:|---:|
-| 3 | 7,240 | 88.9 | 4.00 | 16.7 | 12.5 |
-| 5 | 13,298 | 89.6 | 3.58 | 16.0 | 9.5 |
-| 8 | 23,258 | 90.1 | 3.12 | 12.7 | 9.3 |
-| 10 | 28,466 | 89.7 | 2.59 | 11.8 | 8.0 |
-| 15 | 42,514 | 90.3 | 2.53 | 10.7 | 7.3 |
-| 20 | 57,053 | 90.6 | 2.18 | 8.0 | 6.5 |
-| 25 | 72,280 | 90.6 | 1.79 | 7.0 | 5.0 |
-| 30 | 84,295 | 90.5 | 1.65 | 6.5 | 4.8 |
-| 40 | 112,615 | 90.5 | 1.54 | 5.8 | 4.7 |
-| 50 | 140,166 | 90.4 | 1.22 | 5.3 | 3.7 |
-| 60 | 169,222 | 90.6 | 1.06 | 4.8 | 3.0 |
-| 70 | 198,376 | 90.7 | 0.81 | 3.0 | 2.7 |
+| 3 | 7,240 | 89.0 | 3.85 | 15.3 | 11.8 |
+| 5 | 13,298 | 89.7 | 3.44 | 15.2 | 9.2 |
+| 8 | 23,258 | 90.2 | 3.04 | 12.2 | 9.2 |
+| 10 | 28,466 | 89.8 | 2.42 | 10.8 | 7.8 |
+| 15 | 42,514 | 90.3 | 2.54 | 10.7 | 7.5 |
+| 20 | 57,053 | 90.7 | 2.14 | 8.2 | 6.3 |
+| 25 | 72,280 | 90.6 | 1.74 | 6.5 | 5.2 |
+| 30 | 84,295 | 90.5 | 1.62 | 6.5 | 4.7 |
+| 40 | 112,615 | 90.5 | 1.45 | 5.7 | 4.5 |
+| 50 | 140,166 | 90.5 | 1.20 | 5.3 | 3.5 |
+| 60 | 169,222 | 90.7 | 1.03 | 4.3 | 2.8 |
+| 70 | 198,376 | 90.7 | 0.78 | 2.8 | 2.3 |
 
 Findings from the first pass, kept for context and superseded by experiment 1
 above:
@@ -126,10 +135,10 @@ above:
    earlier recommendation of at least 25, prefer 30. The 24-draft run shows
    this crossing describes the median draft, not most drafts, and that N = 30
    buys nothing over N = 25 once trial noise is accounted for.
-3. The mean score is stable from N = 8 onward, moving only between 89.7 and
+3. The mean score is stable from N = 8 onward, moving only between 89.8 and
    90.7. Small profiles are not biased. They are noisy. This still holds.
 4. Worst case stays wide for a long time. At N = 30 the middle 90 percent of
-   outcomes still spans 4.8 points. The 24-draft run's worst-sd column shows
+   outcomes still spans 4.7 points. The 24-draft run's worst-sd column shows
    this more directly: some drafts are still above 5 points of noise at N = 30.
 
 ## Experiment 2: articles or words?
@@ -143,21 +152,21 @@ fixed word budget was reached, 20 trials per cell.
 
 | Word budget | Arm | Articles used | Actual words | Score stdev |
 |---:|---|---:|---:|---:|
-| 10,000 | short | 7.6 | 10,818 | 3.75 |
-| 10,000 | long | 3.0 | 12,649 | 3.57 |
-| 20,000 | short | 14.4 | 20,738 | 2.07 |
-| 20,000 | long | 5.8 | 22,183 | 3.16 |
-| 40,000 | short | 28.3 | 40,648 | 1.29 |
-| 40,000 | long | 10.7 | 41,557 | 2.51 |
+| 10,000 | short | 7.6 | 10,818 | 3.69 |
+| 10,000 | long | 3.0 | 12,649 | 3.48 |
+| 20,000 | short | 14.4 | 20,738 | 2.04 |
+| 20,000 | long | 5.8 | 22,183 | 3.04 |
+| 40,000 | short | 28.3 | 40,648 | 1.26 |
+| 40,000 | long | 10.7 | 41,557 | 2.49 |
 | 60,000 | short | insufficient corpus | n/a | n/a |
-| 60,000 | long | 16.0 | 62,722 | 2.04 |
+| 60,000 | long | 16.0 | 62,722 | 2.02 |
 | 90,000 | short | insufficient corpus | n/a | n/a |
-| 90,000 | long | 23.1 | 92,305 | 1.64 |
+| 90,000 | long | 23.1 | 92,305 | 1.63 |
 
 From 20,000 words upward the short arm is more stable at every matched budget
 the corpus can reach, and the gap widens as the budget grows. At 40,000 words,
-the largest budget both arms can reach, 28.3 short articles gave 1.29 while
-10.7 long articles gave 2.51, roughly half the noise from article count alone.
+the largest budget both arms can reach, 28.3 short articles gave 1.26 while
+10.7 long articles gave 2.49, roughly half the noise.
 The short arm does not contain enough words to reach the 60,000 or 90,000
 word budgets at all, so those rows show insufficient corpus for short rather
 than a number; the 43-article, 0.60-stdev result reported in an earlier
@@ -201,41 +210,28 @@ or under the 2-point tolerance:
 
 | N | short 1,176 w | mid 2,350 w | long 4,615 w | short cov | mid cov | long cov |
 |---:|---:|---:|---:|---:|---:|---:|
-| 8 | 3.35 | 2.42 | 2.85 | 25.0% | 41.7% | 33.3% |
-| 10 | 2.63 | 2.28 | 2.40 | 25.0% | 41.7% | 45.8% |
-| 12 | 2.53 | 1.92 | 2.24 | 33.3% | 62.5% | 50.0% |
-| 15 | 2.15 | 1.73 | 1.98 | 50.0% | 75.0% | 66.7% |
+| 8 | 3.34 | 2.35 | 2.82 | 20.8% | 45.8% | 41.7% |
+| 10 | 2.62 | 2.20 | 2.38 | 29.2% | 45.8% | 41.7% |
+| 12 | 2.53 | 1.85 | 2.24 | 37.5% | 58.3% | 54.2% |
+| 15 | 2.14 | 1.65 | 1.96 | 54.2% | 75.0% | 66.7% |
 
 Findings:
 
 1. **The short arm is noisiest at every tested N, without exception.** Its gap
-   against the average of the mid and long arms is 0.72, 0.29, 0.45, and 0.30
-   points at N = 8, 10, 12, and 15, a mean of 0.44 points. A 6-draft first pass
-   of this experiment put the gap at 0.86; the 24-draft run about halves it.
-   The direction survived, the magnitude did not.
+   against the average of the mid and long arms is about 0.76, 0.33, 0.49,
+   and 0.34 points at N = 8, 10, 12, and 15, a mean of about 0.48 points.
 2. **Mid is consistently a little lower than long, not indistinguishable from
-   it.** At 24 drafts, mid beats long at all four N, by 0.43, 0.12, 0.32, and
-   0.25 points, a mean of 0.28. The 6-draft first pass had called mid and long
-   indistinguishable with the sign flipping across N; that was an artifact of
-   too few drafts. Call the ordering weak but consistent. The practical
-   consequence is unchanged and now stronger: length past roughly 2,350 words
+   it.** At 24 drafts, mid beats long at all four N, by about 0.47, 0.18,
+   0.39, and 0.31 points, a mean of about 0.34. Call the ordering weak but
+   consistent. The practical consequence is unchanged: length past roughly 2,350 words
    per article buys no further stability, and the 4,615-word arm is marginally
    worse than the 2,350-word arm, not better. "Longer is better" is dead.
-3. **The short-arm penalty is broad, not a tail artifact.** Three of the 24
-   drafts exceed sd 3.0 in the short arm at every tested N, but removing them
-   moves the short-arm mean by only 0.21 to 0.32 points, for example 2.15 to
-   1.90 at N = 15. Most of the effect is spread across most drafts, not
-   concentrated in a few.
-4. **One draft shows genuine short-profile-specific instability.** Its
-   short-arm sd runs 4.4 to 7.6 across all four N, while the same draft in the
-   mid and long arms stays under 2.6, falling to 0.69 to 1.14 at N = 15. This
-   draft is unusually sensitive to which short articles happen to be sampled,
-   specifically.
-5. **A different draft is noisy in every arm at N = 8**, at 5.82, 5.37, and
-   8.65 for short, mid, and long. That draft is inherently volatile at small N
-   regardless of article length, and should not be double-counted as evidence
-   for the length effect.
-6. **No numeric word floor is supported by this data.** The shortest article in
+3. **The short-arm penalty is not confined to its persistent tail.** Four of
+   the 24 drafts exceed sd 3.0 in the short arm at every tested N. Removing
+   them moves the short-arm mean from 3.34 to 2.95 at N = 8, 2.62 to 2.25
+   at N = 10, 2.53 to 2.25 at N = 12, and 2.14 to 1.84 at N = 15.
+   The remaining drafts still show substantial sampling noise.
+4. **No numeric word floor is supported by this data.** The shortest article in
    the corpus is 517 words, so the study cannot see where the floor actually
    sits. The floor itself is unknown. Do not treat any number here as a
    minimum.
@@ -252,10 +248,10 @@ Findings:
 - The 2-point tolerance is a choice. It is defensible because it matches the
   rubric's own granularity, but a team that wants to compare drafts within 1
   point needs a larger corpus than this recommends.
-- Coverage never reaches 100% at the sizes tested. One draft (4,588 words) is
-  still at 2.50 points of noise with 60 articles in the profile. Some drafts
-  sit near several deduction boundaries and may not settle at any practical
-  corpus size, which the mean-only first pass could not show.
+- Coverage is still below 100% at N = 60: one draft (4,588 words) is at
+  2.50 points of noise. It reaches 100% at N = 70 in this run. Some drafts
+  sit near several deduction boundaries and need a much larger corpus than
+  the median draft, which the mean-only first pass could not show.
 - Score noise is not the only thing corpus size affects. Token 1-gram L2 and
   overrepresented terms are reported separately and are more sensitive to corpus
   composition than the score is.
@@ -275,6 +271,7 @@ uv run python docs/profile_size_study.py \
   --references data/profiles/<name>/references.jsonl
 ```
 
-It prints all three tables. Runtime is several minutes for a 100-article
-corpus. The seed is fixed, so repeated runs on the same corpus give identical
-output.
+It prints all three tables. To reproduce the superseded first-pass table,
+use the same references with `--heldout 6 --trials 40`. Runtime is several
+minutes for a 100-article corpus. The seed is fixed, so repeated runs on the
+same corpus give identical output.

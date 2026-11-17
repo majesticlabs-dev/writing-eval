@@ -56,7 +56,7 @@ def test_generate_runs_defaults_to_the_builtin_rules_path() -> None:
     assert default_for(module._parser(), "--rules") is BUILTIN_RULES_PATH
 
 
-def test_repeated_list_openings_preserve_deliberate_repetition_guidance() -> None:
+def test_repeated_list_openings_report_shared_lead_not_prose_repetition() -> None:
     result = run_cli(
         "check", "-", "--format", "json",
         stdin=(
@@ -67,20 +67,21 @@ def test_repeated_list_openings_preserve_deliberate_repetition_guidance() -> Non
     )
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["metrics"]["repeated_opening_rate"] == 1.0
+    assert payload["metrics"]["repeated_opening_rate"] == 0.0
     assert payload["findings"] == [
         {
-            "rule_id": "repeated_openings",
+            "rule_id": "list_shared_lead",
             "severity": "info",
             "message": (
-                "Vary consecutive sentence openings unless the repetition is deliberate."
+                "Every item in this list opens with the same words. State the shared "
+                "words once in a lead-in, or start each item with the words that differ. "
+                "Keep the items parallel."
             ),
-            "line": line,
+            "line": 1,
             "column": 3,
-            "span": "Users",
+            "span": "Users complain about",
             "within_allowance": False,
         }
-        for line in (2, 3)
     ]
 
 
@@ -123,7 +124,7 @@ def test_eval_rules_option_drives_both_loading_and_provenance(tmp_path: Path) ->
     rule_set = data["provenance"]["rule_set"]
     # The path that was loaded is the path that is reported; there is one variable.
     assert rule_set["path"] == str(overlay)
-    assert rule_set["rule_count"] == 34
+    assert rule_set["rule_count"] == 36
     assert len(rule_set["fingerprint"]) == 64
     findings_by_rule = data["systems"][0]["findings_by_rule"]
     assert findings_by_rule.get("overlay_probe") == 1
@@ -147,7 +148,7 @@ def test_eval_default_rules_report_the_builtin_path(tmp_path: Path) -> None:
     assert result == 0
     data = json.loads(json_report.read_text(encoding="utf-8"))
     assert data["provenance"]["rule_set"]["path"] == str(BUILTIN_RULES_PATH)
-    assert data["provenance"]["rule_set"]["rule_count"] == 34
+    assert data["provenance"]["rule_set"]["rule_count"] == 36
 
 
 def test_check_missing_rules_file_exits_one_without_traceback(tmp_path: Path) -> None:

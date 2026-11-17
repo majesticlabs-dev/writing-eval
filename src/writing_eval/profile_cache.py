@@ -40,6 +40,7 @@ _CODE_DIGEST_MODULES = (
     "style_audit_detectors.py",
     "style_audit_engine.py",
     "segmentation.py",
+    "item_sets.py",
 )
 
 

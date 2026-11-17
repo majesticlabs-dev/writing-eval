@@ -70,6 +70,28 @@ def _render_quality_metrics(
         lines.append(f"| {_QUALITY_PARAGRAPH_LABELS[name]} | {_quality_value(value)} |")
 
 
+def _render_record_openings(
+    lines: list[str], openings: Mapping[str, Any] | None
+) -> None:
+    if openings is None:
+        return
+    lines.extend([
+        "", "### Record Openings (informational)", "",
+        "These counts describe shared leads in sets of short outputs, not writing quality. "
+        "They are report-only and do not affect the decision gate.", "",
+        f"- Records: {openings['record_count']}",
+        f"- Distinct leads: {openings['distinct_lead_count']}",
+        f"- Shared-lead record rate: {_quality_value(openings['shared_lead_record_rate'])}", "",
+    ])
+    shared = openings["top_shared_leads"]
+    if shared:
+        lines.extend(["| Lead | Records |", "| --- | ---: |"])
+        for entry in shared:
+            lines.append(f"| {entry['lead']} | {entry['record_count']} |")
+    else:
+        lines.append("None.")
+
+
 def render_markdown(report_data: Mapping[str, Any]) -> str:
     """Render report data as deterministic Markdown with ordered metrics."""
 
@@ -110,6 +132,7 @@ def render_markdown(report_data: Mapping[str, Any]) -> str:
             rendered = "n/a" if value is None else f"{float(value):.6f}"
             lines.append(f"| {_METRIC_LABELS[name]} | {rendered} |")
         _render_quality_metrics(lines, system.get("quality_metrics"))
+        _render_record_openings(lines, system.get("record_openings"))
         lines.extend(["", "### Tell Rates by Severity", ""])
         tell_rates = system.get("tell_rates_by_severity", {})
         if tell_rates:

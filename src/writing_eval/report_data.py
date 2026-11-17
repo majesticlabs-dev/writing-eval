@@ -10,6 +10,7 @@ from pathlib import Path
 import tomllib
 from typing import Any
 
+from .item_sets import record_openings
 from .metrics import (
     mtld,
     paragraph_stats,
@@ -135,6 +136,7 @@ def build_report(
     return {
         "system_name": system_name,
         "document_count": len(text_list),
+        "record_openings": record_openings(text_list),
         "word_count": word_count,
         "finding_count": len(findings),
         "findings_by_severity": severity_counts,

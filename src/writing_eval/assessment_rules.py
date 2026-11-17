@@ -10,7 +10,22 @@ from .assessment_core import (
     CLARITY_RULES,
     SEVERITY_DEDUCTION,
     SEVERITY_PRIORITY,
+    STRUCTURE_RULES,
 )
+
+_LIST_ISSUE_TEXT = {
+    "list_shared_lead": (
+        "{count} list{plural} {open_verb} every item with the same words",
+        "Each list you revise states the shared words once or leads with the words "
+        "that differ. A list kept as deliberate repetition stays a review candidate "
+        "and costs no points.",
+    ),
+    "list_inconsistent_form": (
+        "{count} list item{plural} {differ_verb} in form from the other items in the same list",
+        "Each flagged list uses one form for every item, or the difference marks "
+        "a real distinction.",
+    ),
+}
 
 
 def build_rule_baseline(
@@ -82,7 +97,10 @@ def rule_issues(
         if baseline is not None and excess == 0:
             continue
         label = rule_id.replace("_", " ")
-        section = "clarity_directness" if rule_id in CLARITY_RULES else "vocabulary_style"
+        section = (
+            "rhythm_structure" if rule_id in STRUCTURE_RULES else
+            "clarity_directness" if rule_id in CLARITY_RULES else "vocabulary_style"
+        )
         requested = SEVERITY_DEDUCTION.get(severity, 0) * excess
         if baseline is None:
             summary = f"{label.capitalize()} appears {count} time{'' if count == 1 else 's'}."
@@ -98,6 +116,15 @@ def rule_issues(
             success = (
                 f"Reduce {label} occurrences from {count} to the profile allowance "
                 f"of {allowance}."
+            )
+        if rule_id in _LIST_ISSUE_TEXT:
+            template, success = _LIST_ISSUE_TEXT[rule_id]
+            summary = template.format(
+                count=count, plural="" if count == 1 else "s",
+                open_verb="opens" if count == 1 else "open",
+                differ_verb="differs" if count == 1 else "differ",
+            ) + (
+                "." if baseline is None else f", {excess} above the profile allowance."
             )
         issues.append(
             {
