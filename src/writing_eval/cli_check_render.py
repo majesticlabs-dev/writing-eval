@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .assessment import render_assessment
@@ -100,5 +101,20 @@ def render_check_text(result: dict[str, Any]) -> str:
     lines.append(f"  repeated_opening_rate: {_format_number(metrics['repeated_opening_rate'])}")
     lines.append(f"  token_1gram_l2: {_format_number(metrics['token_1gram_l2'])}")
     _render_check_quality(lines, result.get("quality_metrics"))
+    item_sets = result["item_sets"]
+    lines.append("item_sets:" if item_sets else "item_sets: none")
+    for group in item_sets:
+        distinct = group["distinct_lead_count"]
+        description = (
+            f"  line {group['line']}: {group['item_count']} {group['marker']} items, "
+            f"{distinct} distinct lead{'' if distinct == 1 else 's'}"
+        )
+        if group["shared_lead"] is not None:
+            description += f", shared lead {json.dumps(group['shared_lead'], ensure_ascii=False)}"
+        if group["form_outlier_lines"]:
+            description += ", form outliers at lines " + ", ".join(
+                str(line) for line in group["form_outlier_lines"]
+            )
+        lines.append(description)
     _render_style_gap(lines, result.get("style_gap"))
     return "\n".join(lines) + "\n"

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 import statistics
 
-from .segmentation import segment, sentence_opener, tokenize
+from .segmentation import segment, sentence_opener, starts_list_item, tokenize
 
 
 def _span_token_lengths(text: str) -> list[int]:
@@ -37,13 +37,13 @@ def sentence_length_variance(text: str) -> float:
     return sentence_length_stats(text)[1]
 
 
-def _opener_groups(text: str) -> list[list[str]]:
-    groups: list[list[str]] = []
+def _opener_groups(text: str) -> list[list[tuple[str, bool]]]:
+    groups: list[list[tuple[str, bool]]] = []
     for group in segment(text):
-        openers: list[str] = []
+        openers: list[tuple[str, bool]] = []
         for start, end in group:
             opener = sentence_opener(text, start, end)
-            openers.append(text[opener[0] : opener[1]].casefold())
+            openers.append((text[opener[0] : opener[1]].casefold(), starts_list_item(text, start)))
         groups.append(openers)
     return groups
 
@@ -54,15 +54,26 @@ def repeated_opening_rate(text: str) -> float:
     return repeated_opening_corpus_rate([text])
 
 
+def repeated_opening_pair_counts(text: str) -> tuple[int, int]:
+    """Return repeated and eligible adjacent-pair counts for one document."""
+
+    repeated_pairs = 0
+    total_pairs = 0
+    for openers in _opener_groups(text):
+        for (left, _), (right, list_start) in zip(openers, openers[1:]):
+            if not list_start:
+                total_pairs += 1
+                repeated_pairs += left == right
+    return repeated_pairs, total_pairs
+
+
 def repeated_opening_corpus_rate(texts: Iterable[str]) -> float:
     """Return the corpus repeated sentence-opening rate."""
 
     repeated_pairs = 0
     total_pairs = 0
     for text in texts:
-        for openers in _opener_groups(text):
-            total_pairs += max(len(openers) - 1, 0)
-            repeated_pairs += sum(
-                left == right for left, right in zip(openers, openers[1:])
-            )
+        repeated, total = repeated_opening_pair_counts(text)
+        repeated_pairs += repeated
+        total_pairs += total
     return repeated_pairs / total_pairs if total_pairs else 0.0

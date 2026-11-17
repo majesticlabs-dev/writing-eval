@@ -13,7 +13,7 @@ import pytest
 from writing_eval import cli_check, cli_eval
 from writing_eval.style_audit import BUILTIN_RULES_PATH, load_rules
 
-from tests.helpers_cli import ROOT, SCRIPT, load_run_eval_module, write_jsonl
+from tests.helpers_cli import ROOT, SCRIPT, load_run_eval_module, run_cli, write_jsonl
 
 OVERLAY_YAML = """extends: builtin
 rules:
@@ -56,6 +56,35 @@ def test_generate_runs_defaults_to_the_builtin_rules_path() -> None:
     assert default_for(module._parser(), "--rules") is BUILTIN_RULES_PATH
 
 
+def test_repeated_list_openings_report_shared_lead_not_prose_repetition() -> None:
+    result = run_cli(
+        "check", "-", "--format", "json",
+        stdin=(
+            "- Users complain about crashes.\n"
+            "- Users complain about billing.\n"
+            "- Users complain about login failures.\n"
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["metrics"]["repeated_opening_rate"] == 0.0
+    assert payload["findings"] == [
+        {
+            "rule_id": "list_shared_lead",
+            "severity": "info",
+            "message": (
+                "Every item in this list opens with the same words. State the shared "
+                "words once in a lead-in, or start each item with the words that differ. "
+                "Keep the items parallel."
+            ),
+            "line": 1,
+            "column": 3,
+            "span": "Users complain about",
+            "within_allowance": False,
+        }
+    ]
+
+
 def test_builtin_rules_path_is_absolute_and_present() -> None:
     assert BUILTIN_RULES_PATH.is_absolute()
     assert BUILTIN_RULES_PATH.is_file()
@@ -95,7 +124,7 @@ def test_eval_rules_option_drives_both_loading_and_provenance(tmp_path: Path) ->
     rule_set = data["provenance"]["rule_set"]
     # The path that was loaded is the path that is reported; there is one variable.
     assert rule_set["path"] == str(overlay)
-    assert rule_set["rule_count"] == 34
+    assert rule_set["rule_count"] == 36
     assert len(rule_set["fingerprint"]) == 64
     findings_by_rule = data["systems"][0]["findings_by_rule"]
     assert findings_by_rule.get("overlay_probe") == 1
@@ -119,7 +148,7 @@ def test_eval_default_rules_report_the_builtin_path(tmp_path: Path) -> None:
     assert result == 0
     data = json.loads(json_report.read_text(encoding="utf-8"))
     assert data["provenance"]["rule_set"]["path"] == str(BUILTIN_RULES_PATH)
-    assert data["provenance"]["rule_set"]["rule_count"] == 34
+    assert data["provenance"]["rule_set"]["rule_count"] == 36
 
 
 def test_check_missing_rules_file_exits_one_without_traceback(tmp_path: Path) -> None:

@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 import re
 
+from .item_sets import find_item_sets, form_outliers, shared_lead_span
 from .segmentation import (
-    LIST_MARKER_RE,
+    starts_list_item,
     segment,
     sentence_opener,
     tokenize,
@@ -21,7 +22,8 @@ def detect_repeated_openings(text: str) -> Iterable[Candidate]:
         for span_start, span_end in group:
             opener = sentence_opener(text, span_start, span_end)
             word = text[opener[0] : opener[1]]
-            if previous_word and word.casefold() == previous_word.casefold():
+            if (previous_word and not starts_list_item(text, span_start)
+                    and word.casefold() == previous_word.casefold()):
                 yield Candidate(word, opener[0], previous_start, span_end)
             previous_word = word
             previous_start = span_start
@@ -61,10 +63,24 @@ def detect_negative_listing(text: str) -> Iterable[Candidate]:
             run_count = 0
 
 
-def _is_list_item_span(text: str, span_start: int) -> bool:
-    line_start = text.rfind("\n", 0, span_start) + 1
-    prefix = text[line_start:span_start]
-    return LIST_MARKER_RE.fullmatch(prefix) is not None
+def detect_list_shared_lead(text: str) -> Iterable[Candidate]:
+    """Find list sets whose first word window is identical in every item."""
+
+    for group in find_item_sets(text):
+        shared = shared_lead_span(text, group)
+        if shared is not None:
+            start, end = shared
+            yield Candidate(text[start:end], start, group.items[0].start, group.items[-1].end)
+
+
+def detect_list_inconsistent_form(text: str) -> Iterable[Candidate]:
+    """Find label or punctuation outliers among sibling list items."""
+
+    for group in find_item_sets(text):
+        for item in form_outliers(text, group):
+            yield Candidate(
+                text[item.start:item.first_line_end], item.start, item.start, item.end
+            )
 
 
 def detect_manufactured_staccato(text: str) -> Iterable[Candidate]:
@@ -74,7 +90,7 @@ def detect_manufactured_staccato(text: str) -> Iterable[Candidate]:
         run: list[tuple[int, int]] = []
         for span_start, span_end in group:
             word_count = len(tokenize(text[span_start:span_end]))
-            if 0 < word_count <= 5 and not _is_list_item_span(text, span_start):
+            if 0 < word_count <= 5 and not starts_list_item(text, span_start):
                 run.append((span_start, span_end))
                 continue
             if len(run) >= 4:
@@ -164,6 +180,8 @@ def detect_boldface_density(text: str) -> Iterable[Candidate]:
 
 NAMED_DETECTORS: dict[str, DetectorFunction] = {
     "repeated_openings": detect_repeated_openings,
+    "list_shared_lead": detect_list_shared_lead,
+    "list_inconsistent_form": detect_list_inconsistent_form,
     "negative_listing": detect_negative_listing,
     "manufactured_staccato": detect_manufactured_staccato,
     "fragmented_header": detect_fragmented_header,

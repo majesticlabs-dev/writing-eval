@@ -8,10 +8,9 @@ class ProfileError(Exception):
     """An expected profile build, load, or lookup error."""
 
 
-# Version 2 changes curly-apostrophe openers, markdown-aware readability word
-# counts, and MTLD tail, threshold, and sequence-input semantics. Rebuild older
-# profiles so stored statistics stay comparable with fresh draft metrics.
-METRICS_VERSION = 2
+# Version 3 excludes pairs entering list items from repeated-opening rates.
+# Rebuild older profiles so stored statistics match fresh draft metrics.
+METRICS_VERSION = 3
 
 
 @dataclass(frozen=True)
