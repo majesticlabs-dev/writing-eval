@@ -874,6 +874,9 @@ single drafts.
   quality.
 - Corpus metrics are sensitive to sample size, genre, and reference selection.
 - Simple token and sentence boundaries can differ from linguistic parsers.
+- Adjacent list items in the same segmentation group count as consecutive
+  sentences for repeated-opening analysis. Deliberate parallel openings can
+  still produce informational findings; they do not automatically need revision.
 - A rule match identifies a review candidate, not a universal writing error.
 - The harness does not evaluate factual accuracy, coverage, or human preference.
 - Literal preservation is a normalized multiset comparison, not semantic factuality.

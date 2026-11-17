@@ -36,7 +36,7 @@ rules:
   - id: repeated_openings
     severity: info
     detector: repeated_openings
-    message: Vary consecutive sentence openings.
+    message: Vary consecutive sentence openings unless the repetition is deliberate.
     exceptions: []
 
   - id: vague_authority

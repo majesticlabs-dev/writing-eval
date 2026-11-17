@@ -13,7 +13,7 @@ import pytest
 from writing_eval import cli_check, cli_eval
 from writing_eval.style_audit import BUILTIN_RULES_PATH, load_rules
 
-from tests.helpers_cli import ROOT, SCRIPT, load_run_eval_module, write_jsonl
+from tests.helpers_cli import ROOT, SCRIPT, load_run_eval_module, run_cli, write_jsonl
 
 OVERLAY_YAML = """extends: builtin
 rules:
@@ -54,6 +54,34 @@ def test_decision_gate_defaults_to_the_builtin_rules_path() -> None:
 def test_generate_runs_defaults_to_the_builtin_rules_path() -> None:
     module = load_script("generate_runs.py")
     assert default_for(module._parser(), "--rules") is BUILTIN_RULES_PATH
+
+
+def test_repeated_list_openings_preserve_deliberate_repetition_guidance() -> None:
+    result = run_cli(
+        "check", "-", "--format", "json",
+        stdin=(
+            "- Users complain about crashes.\n"
+            "- Users complain about billing.\n"
+            "- Users complain about login failures.\n"
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["metrics"]["repeated_opening_rate"] == 1.0
+    assert payload["findings"] == [
+        {
+            "rule_id": "repeated_openings",
+            "severity": "info",
+            "message": (
+                "Vary consecutive sentence openings unless the repetition is deliberate."
+            ),
+            "line": line,
+            "column": 3,
+            "span": "Users",
+            "within_allowance": False,
+        }
+        for line in (2, 3)
+    ]
 
 
 def test_builtin_rules_path_is_absolute_and_present() -> None:

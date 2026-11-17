@@ -2,6 +2,18 @@
 
 All notable changes to `writing-eval` are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- Repeated-opening advice now allows deliberate repetition. Detection, severity,
+  and metric values are unchanged, but the message changes the builtin rule
+  fingerprint and the guidance supplied to generation revision prompts. Do not
+  treat reports with different rule fingerprints as fingerprint-comparable.
+  Refresh profile caches with `./writing-eval profile cache <name>` (adding
+  `--rules PATH` when using custom rules). Checks remain correct without a
+  refresh, but recompute reference statistics.
+
 ## [0.2.0] - 2026-08-22
 
 ### Added
